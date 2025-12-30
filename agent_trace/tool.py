@@ -2,7 +2,6 @@ from functools import wraps
 from typing import Any, Callable, Optional, Union, get_type_hints, get_origin, get_args
 import inspect
 import asyncio
-
 from .models import ToolExecution
 from .context import record_tool_execution
 
@@ -142,20 +141,7 @@ class ToolWrapper:
             record_tool_execution(execution)
 
     def tool(func: Callable = None, *, name: str = None, description: str = None) -> Union[ToolWrapper, Callable]:
-    """
-    Decorator to mark a function as a traceable tool.
-    
-    Usage:
-        @tool
-        def my_tool(x: str) -> str:
-            '''Description here.'''
-            return x.upper()
-        
-        # Or with arguments:
-        @tool(name="custom_name")
-        def my_tool(x: str) -> str:
-            ...
-    """
+
     def decorator(f: Callable) -> ToolWrapper:
         return ToolWrapper(f, name=name, description=description)
     

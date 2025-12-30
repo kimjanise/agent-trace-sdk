@@ -59,7 +59,7 @@ class ToolExecution:
 class ToolCallRequest:
     """A tool call requested by the LLM."""
     tool_call_id: str
-    tool_nameL str
+    tool_name: str
     arguments_raw: str
     arguments_parsed: Optional[dict] = None
 
