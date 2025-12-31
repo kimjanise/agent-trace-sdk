@@ -1,20 +1,23 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Optional
-from enum import enum
+from enum import Enum
 import uuid
-import json
+
 
 def generate_id() -> str:
     return str(uuid.uuid4())
 
+
 def now() -> datetime:
     return datetime.utcnow()
 
+
 class ToolExecutionStatus(Enum):
-    SUCCESS: "success"
-    ERROR: "error"
-    PENDING: "pending"
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
+
 
 @dataclass
 class ToolExecution:
@@ -25,9 +28,9 @@ class ToolExecution:
     error: Optional[str] = None
     started_at: datetime = field(default_factory=now)
     ended_at: Optional[datetime] = None
-    status: ToolToolExecutionStatus = ToolExecutionStatus.PENDING
+    status: ToolExecutionStatus = ToolExecutionStatus.PENDING
     llm_call_id: Optional[str] = None
-
+    
     def complete(self, result: Any = None, error: str = None) -> None:
         self.ended_at = now()
         if error:
@@ -38,7 +41,7 @@ class ToolExecution:
             self.status = ToolExecutionStatus.SUCCESS
     
     @property
-    def duration_ms(self) -> int:
+    def duration_ms(self) -> Optional[int]:
         if self.ended_at is None:
             return None
         delta = self.ended_at - self.started_at
@@ -46,87 +49,89 @@ class ToolExecution:
     
     def to_dict(self) -> dict:
         return {
-            execution_id: self.execution_id,
-            tool_name: self.tool_name,
-            arguments: self.arguments,
-            result: self.result if self.result else None,
-            error: self.error,
-            duration_ms: self.duration_ms,
-            status: self.status.value,
+            "execution_id": self.execution_id,
+            "tool_name": self.tool_name,
+            "arguments": self.arguments,
+            "result": str(self.result) if self.result else None,
+            "error": self.error,
+            "duration_ms": self.duration_ms,
+            "status": self.status.value,
         }
+
 
 @dataclass
 class ToolCallRequest:
-    """A tool call requested by the LLM."""
     tool_call_id: str
     tool_name: str
     arguments_raw: str
     arguments_parsed: Optional[dict] = None
 
+
 @dataclass
 class TokenUsage:
-    """Token usage statistics."""
     prompt_tokens: int = 0
     completion_tokens: int = 0
-    total_tokensL int = 0
+    total_tokens: int = 0
+
 
 @dataclass
 class LLMCall:
-    """Represents a single call to the language model."""
     call_id: str = field(default_factory=generate_id)
     provider: str = "unknown"
     model: str = "unknown"
-
+    
     request_messages: list = field(default_factory=list)
     request_tools: list = field(default_factory=list)
     request_system_prompt: Optional[str] = None
     request_temperature: Optional[float] = None
     request_max_tokens: Optional[int] = None
-
+    
     response_content: Optional[str] = None
     response_tool_calls: list = field(default_factory=list)
     response_finish_reason: Optional[str] = None
     usage: TokenUsage = field(default_factory=TokenUsage)
-
+    
     started_at: datetime = field(default_factory=now)
     ended_at: Optional[datetime] = None
-    streaming: bool = None
-
+    streaming: bool = False
+    
     def complete(self) -> None:
         self.ended_at = now()
-
+    
     @property
     def duration_ms(self) -> Optional[int]:
         if self.ended_at is None:
             return None
         return int((self.ended_at - self.started_at).total_seconds() * 1000)
-
+    
     @property
     def has_tool_calls(self) -> bool:
         return len(self.response_tool_calls) > 0
+
 
 class TraceStatus(Enum):
     ACTIVE = "active"
     COMPLETED = "completed"
     ERROR = "error"
 
+
 @dataclass
 class Trace:
     trace_id: str = field(default_factory=generate_id)
     agent_name: str = "unnamed_agent"
-    input: any = None
+    input: Any = None
     output: Any = None
     error: Optional[str] = None
-    started_at: datetime = (default_factory=now)
+    started_at: datetime = field(default_factory=now)
     ended_at: Optional[datetime] = None
     status: TraceStatus = TraceStatus.ACTIVE
     llm_calls: list = field(default_factory=list)
     tool_executions: list = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
-
+    
     def add_llm_call(self, llm_call: LLMCall) -> None:
         self.llm_calls.append(llm_call)
-
+    
     def add_tool_execution(self, execution: ToolExecution) -> None:
         self.tool_executions.append(execution)
     
@@ -138,13 +143,13 @@ class Trace:
         else:
             self.output = output
             self.status = TraceStatus.COMPLETED
-
+    
     @property
     def duration_ms(self) -> Optional[int]:
         if self.ended_at is None:
-            return None 
+            return None
         return int((self.ended_at - self.started_at).total_seconds() * 1000)
-
+    
     @property
     def total_tokens(self) -> int:
         return sum(call.usage.total_tokens for call in self.llm_calls)
@@ -172,7 +177,5 @@ class Trace:
         }
     
     def to_json(self, indent: int = 2) -> str:
+        import json
         return json.dumps(self.to_dict(), indent=indent, default=str)
-
-    
-

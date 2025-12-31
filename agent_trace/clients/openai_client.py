@@ -1,7 +1,7 @@
 from typing import Any, Optional
 import json
-from .models import LLMCall, ToolCallRequest, TokenUsage
-from .context import record_llm_call
+from ..models import LLMCall, ToolCallRequest, TokenUsage
+from ..context import record_llm_call
 
 class TracedOpenAICompletions:
     def __init__(self, original_completions, provider: str = "openai"):

@@ -1,0 +1,66 @@
+from agent_trace import tool, agent, traced_client
+from openai import OpenAI;
+from dotenv import load_dotenv
+import json
+
+load_dotenv()
+
+@tool
+def get_weather(location: str) -> dict:
+    return {"location": location, "temperature": 72, "conditions": "sunny"}
+
+@tool
+def get_date(location: str) -> dict:
+    return {"day": 17, "month": 5, "year": 2004}
+
+sample_client = OpenAI();
+client = traced_client(sample_client)
+
+@agent
+def sample_agent(query: str) -> str:    
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": query}],
+        tools=[{"type": "function", "function": get_weather.schema}, {"type": "function", "function": get_date.schema}],
+    )
+    
+    message = response.choices[0].message
+    messages = [{"role": "user", "content": query}]
+    
+    if message.tool_calls:
+        messages.append(message)
+
+        for tool_call in message.tool_calls:
+            function_name = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
+            
+            if function_name == "get_weather":
+                result = get_weather(**arguments)
+                messages.append({
+                    "role": "function",
+                    "name": function_name,
+                    "content": json.dumps(result),
+                    "tool_call_id": tool_call.id
+                })
+            elif function_name == "get_date":
+                result = get_date(**arguments)
+                messages.append({
+                    "role": "function",
+                    "name": function_name,
+                    "content": json.dumps(result),
+                    "tool_call_id": tool_call.id
+                })
+    
+    return response.choices[0].message.content
+
+if __name__ == "__main__":
+    result = sample_agent("What's the weather in San Francisco? What is the date?")
+    
+    print(f"Result: {result}\n")
+    
+    trace = sample_agent.last_trace
+    print(f"Trace ID: {trace.trace_id}")
+    print(f"Duration: {trace.duration_ms}ms")
+    print(f"LLM Calls: {trace.total_llm_calls}")
+    print(f"Tool Executions: {trace.total_tool_executions}")
+    print(f"\n{trace.to_json()}")

@@ -5,7 +5,8 @@ import inspect
 from .models import Trace
 from .context import TraceContext, AsyncTraceContext, get_current_trace
 
-class AgentWrapper:
+
+class AgentWrapper:    
     def __init__(self, func: Callable, name: str = None):
         self._func = func
         self._name = name or func.__name__
@@ -24,7 +25,6 @@ class AgentWrapper:
     
     @property
     def last_trace(self) -> Optional[Trace]:
-        """The trace from the last invocation."""
         return self._last_trace
     
     def __call__(self, *args, **kwargs) -> Any:
@@ -67,6 +67,7 @@ class AgentWrapper:
                 trace.complete(error=str(e))
                 raise
 
+
 def agent(func: Callable = None, *, name: str = None) -> Union[AgentWrapper, Callable]:
     def decorator(f: Callable) -> AgentWrapper:
         return AgentWrapper(f, name=name)
@@ -74,6 +75,7 @@ def agent(func: Callable = None, *, name: str = None) -> Union[AgentWrapper, Cal
     if func is not None:
         return decorator(func)
     return decorator
+
 
 def get_trace() -> Optional[Trace]:
     return get_current_trace()
