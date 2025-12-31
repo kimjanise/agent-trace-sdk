@@ -11,6 +11,8 @@ export interface Trace {
   total_tokens: number;
   duration_ms: number | null;
   created_at: string;
+  // Computed field for UI
+  tool_error_count?: number;
 }
 
 export interface LLMCall {
