@@ -6,9 +6,6 @@ import { getTraces } from "@/lib/supabase";
 import TraceTable from "@/components/TraceTable";
 import TraceDetailPanel from "@/components/TraceDetailPanel";
 import {
-  ChevronRight,
-  Share2,
-  Settings,
   RefreshCw,
   Filter
 } from "lucide-react";
@@ -51,43 +48,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f9fafb]">
-      {/* Top Header Bar - Galileo style */}
-      <header className="bg-white border-b border-[#e5e7eb]">
-        <div className="flex items-center justify-between px-6 h-14">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-[14px]">
-            <span className="text-[#6b7280] hover:text-[#1f2937] cursor-pointer">
-              AgentTrace
-            </span>
-            <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
-            <span className="text-[#6b7280] hover:text-[#1f2937] cursor-pointer">
-              Log Stream: DefaultStream
-            </span>
-            <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
-            <span className="text-[#1f2937] font-medium">
-              All Sessions
-            </span>
-          </div>
-
-          {/* Right actions */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={loadTraces}
-              disabled={loading}
-              className="flex items-center gap-2 text-[14px] text-[#6b7280] hover:text-[#1f2937] px-4 py-2 rounded hover:bg-[#f3f4f6] transition-colors"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
-            <button className="flex items-center gap-2 text-[14px] text-[#6b7280] hover:text-[#1f2937] px-4 py-2 rounded hover:bg-[#f3f4f6] transition-colors">
-              <Share2 className="w-5 h-5" />
-              Share
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Secondary Header with Tabs */}
+      {/* Header with Tabs */}
       <div className="bg-white border-b border-[#e5e7eb]">
         <div className="flex items-center justify-between px-6">
           {/* Tabs */}
@@ -119,9 +80,13 @@ export default function Home() {
             <span className="text-[14px] text-[#6b7280]">
               {traces.length} sessions
             </span>
-            <button className="bg-[#6366f1] hover:bg-[#4f46e5] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium flex items-center gap-2 transition-colors">
-              <Settings className="w-5 h-5" />
-              Configure Metrics
+            <button
+              onClick={loadTraces}
+              disabled={loading}
+              className="bg-[#6366f1] hover:bg-[#4f46e5] text-white px-3 py-1.5 rounded-md text-[13px] font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
             </button>
           </div>
         </div>

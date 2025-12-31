@@ -20,7 +20,7 @@ sample_client = OpenAI()
 client = traced_client(sample_client)
 
 @agent
-def failing_demo_agent(query: str) -> str:
+def bad_agent(query: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": query}],
@@ -77,11 +77,11 @@ def failing_demo_agent(query: str) -> str:
 
 if __name__ == "__main__":
     # This query will trigger the failing get_stock_price tool
-    result = failing_demo_agent("What's the current stock price of AAPL and what's the weather in New York?")
+    result = bad_agent("What's the current stock price of AAPL and what's the weather in New York?")
 
     print(f"Result: {result}\n")
 
-    trace = failing_demo_agent.last_trace
+    trace = bad_agent.last_trace
     print(f"Trace ID: {trace.trace_id}")
     print(f"Duration: {trace.duration_ms}ms")
     print(f"LLM Calls: {trace.total_llm_calls}")

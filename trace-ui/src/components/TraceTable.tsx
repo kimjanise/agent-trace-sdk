@@ -14,13 +14,13 @@ function getStatusBadge(status: string) {
     case "completed":
       return (
         <span className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded bg-[#d1fae5] text-[#065f46]">
-          completed
+          COMPLETED
         </span>
       );
     case "error":
       return (
         <span className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded bg-[#fee2e2] text-[#dc2626]">
-          error
+          FAILED
         </span>
       );
     default:
@@ -103,7 +103,7 @@ export default function TraceTable({
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 rounded bg-[#eef2ff] flex items-center justify-center">
                     <svg className="w-3.5 h-3.5 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                     </svg>
                   </div>
                   <span className="text-[14px] text-[#1f2937]">Agent</span>
