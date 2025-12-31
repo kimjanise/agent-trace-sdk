@@ -14,7 +14,7 @@ sample_client = OpenAI();
 client = traced_client(sample_client)
 
 @agent
-def sample_agent(query: str) -> str:    
+def single_tool_agent(query: str) -> str:    
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": query}],
@@ -56,13 +56,4 @@ def sample_agent(query: str) -> str:
     return final_response.choices[0].message.content
 
 if __name__ == "__main__":
-    result = sample_agent("What's the weather in San Francisco? What is the date?")
-    
-    print(f"Result: {result}\n")
-    
-    trace = sample_agent.last_trace
-    print(f"Trace ID: {trace.trace_id}")
-    print(f"Duration: {trace.duration_ms}ms")
-    print(f"LLM Calls: {trace.total_llm_calls}")
-    print(f"Tool Executions: {trace.total_tool_executions}")
-    print(f"\n{trace.to_json()}")
+    result = single_tool_agent("What's the weather in San Francisco? What is the date?")

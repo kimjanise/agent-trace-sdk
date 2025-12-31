@@ -6,10 +6,9 @@ import json
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 72, "conditions": "sunny"}
 
+# ERROR
 @tool
 def get_stock_price(symbol: str) -> dict:
-    """Get the current stock price for a given symbol."""
-    # This tool intentionally fails to test error handling
     raise ValueError(f"Failed to fetch stock price: API rate limit exceeded for symbol '{symbol}'")
 
 @tool
@@ -58,7 +57,6 @@ def bad_agent(query: str) -> str:
                     "tool_call_id": tool_call.id
                 })
             except Exception as e:
-                # Tool failed - append error message
                 messages.append({
                     "role": "tool",
                     "name": function_name,
@@ -66,7 +64,6 @@ def bad_agent(query: str) -> str:
                     "tool_call_id": tool_call.id
                 })
 
-        # Get final response after tool calls
         final_response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
@@ -76,14 +73,4 @@ def bad_agent(query: str) -> str:
     return response.choices[0].message.content
 
 if __name__ == "__main__":
-    # This query will trigger the failing get_stock_price tool
     result = bad_agent("What's the current stock price of AAPL and what's the weather in New York?")
-
-    print(f"Result: {result}\n")
-
-    trace = bad_agent.last_trace
-    print(f"Trace ID: {trace.trace_id}")
-    print(f"Duration: {trace.duration_ms}ms")
-    print(f"LLM Calls: {trace.total_llm_calls}")
-    print(f"Tool Executions: {trace.total_tool_executions}")
-    print(f"\n{trace.to_json()}")
