@@ -15,6 +15,19 @@ interface TraceDetailPanelProps {
   onNavigate: (direction: "prev" | "next") => void;
 }
 
+function formatDuration(ms: number | null) {
+  if (ms === null) return "—";
+  if (ms >= 60000) {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+  if (ms >= 10000) {
+    return `${(ms / 1000).toFixed(1)} sec`;
+  }
+  return `${ms} ms`;
+}
+
 function buildTree(
   trace: Trace,
   llmCalls: LLMCall[],
@@ -291,11 +304,7 @@ export default function TraceDetailPanel({
                       <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
                         <span className="text-[14px] text-[#6b7280]">Latency</span>
                         <span className="text-[14px] text-[#1f2937] font-medium">
-                          {selectedNode.duration_ms
-                            ? selectedNode.duration_ms < 1000
-                              ? `${selectedNode.duration_ms} ms`
-                              : `${(selectedNode.duration_ms / 1000).toFixed(2)} sec`
-                            : "—"}
+                          {formatDuration(selectedNode.duration_ms)}
                         </span>
                       </div>
                       {selectedNode.type === "llm" && (
