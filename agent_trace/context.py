@@ -5,6 +5,7 @@ from .models import Trace, LLMCall, ToolExecution
 
 _current_trace: ContextVar[Optional[Trace]] = ContextVar('current_trace', default=None)
 _current_llm_call: ContextVar[Optional[LLMCall]] = ContextVar('current_llm_call', default=None)
+_last_llm_call_with_tools: ContextVar[Optional[LLMCall]] = ContextVar('last_llm_call_with_tools', default=None)
 
 
 def get_current_trace() -> Optional[Trace]:
@@ -13,6 +14,14 @@ def get_current_trace() -> Optional[Trace]:
 
 def get_current_llm_call() -> Optional[LLMCall]:
     return _current_llm_call.get()
+
+
+def get_last_llm_call_with_tools() -> Optional[LLMCall]:
+    return _last_llm_call_with_tools.get()
+
+
+def set_last_llm_call_with_tools(llm_call: Optional[LLMCall]) -> None:
+    _last_llm_call_with_tools.set(llm_call)
 
 
 class TraceContext:
@@ -54,7 +63,10 @@ def record_llm_call(llm_call: LLMCall) -> None:
 def record_tool_execution(execution: ToolExecution) -> None:
     trace = get_current_trace()
     if trace is not None:
+        # First try active LLM call context, then fall back to last LLM call with tools
         llm_call = get_current_llm_call()
+        if llm_call is None:
+            llm_call = get_last_llm_call_with_tools()
         if llm_call is not None:
             execution.llm_call_id = llm_call.call_id
         trace.add_tool_execution(execution)

@@ -1,7 +1,7 @@
 from typing import Any, Optional
 import json
 from ..models import LLMCall, ToolCallRequest, TokenUsage
-from ..context import record_llm_call
+from ..context import record_llm_call, set_last_llm_call_with_tools
 
 class TracedOpenAICompletions:
     def __init__(self, original_completions, provider: str = "openai"):
@@ -26,11 +26,23 @@ class TracedOpenAICompletions:
             provider=self._provider,
             model=kwargs.get("model", "unknown"),
         )
-        
+
         messages = kwargs.get("messages", [])
-        llm_call.request_messages = messages
-        
+        # Convert Pydantic objects to dicts for storage
+        serialized_messages = []
         for msg in messages:
+            if isinstance(msg, dict):
+                serialized_messages.append(msg)
+            elif hasattr(msg, "model_dump"):
+                serialized_messages.append(msg.model_dump(exclude_none=True))
+            elif hasattr(msg, "dict"):
+                serialized_messages.append(msg.dict(exclude_none=True))
+            else:
+                serialized_messages.append({"content": str(msg)})
+
+        llm_call.request_messages = serialized_messages
+
+        for msg in serialized_messages:
             if msg.get("role") == "system":
                 llm_call.request_system_prompt = msg.get("content")
                 break
@@ -64,6 +76,8 @@ class TracedOpenAICompletions:
                     except json.JSONDecodeError:
                         pass
                     llm_call.response_tool_calls.append(tool_call)
+                # Track this as the last LLM call with tools for linking tool executions
+                set_last_llm_call_with_tools(llm_call)
             
             if hasattr(response, 'usage') and response.usage:
                 llm_call.usage = TokenUsage(

@@ -22,17 +22,17 @@ function CollapsibleSection({ title, icon, defaultOpen = true, children }: Colla
     <div className="border-b border-[#e5e7eb]">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-4 py-3 text-left hover:bg-[#f9fafb] transition-colors"
+        className="flex items-center gap-3 w-full px-5 py-4 text-left hover:bg-[#f9fafb] transition-colors"
       >
         {open ? (
-          <ChevronDown className="w-4 h-4 text-[#9ca3af]" />
+          <ChevronDown className="w-5 h-5 text-[#9ca3af]" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-[#9ca3af]" />
+          <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
         )}
         {icon}
-        <span className="text-[13px] font-medium text-[#1f2937]">{title}</span>
+        <span className="text-[15px] font-medium text-[#1f2937]">{title}</span>
       </button>
-      {open && <div className="px-4 pb-4">{children}</div>}
+      {open && <div className="px-5 pb-5">{children}</div>}
     </div>
   );
 }
@@ -65,24 +65,24 @@ function getIcon(type: string) {
   switch (type) {
     case "agent":
       return (
-        <div className="w-5 h-5 rounded bg-[#eef2ff] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-7 h-7 rounded bg-[#eef2ff] flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
           </svg>
         </div>
       );
     case "llm":
       return (
-        <div className="w-5 h-5 rounded bg-[#fef3c7] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#d97706]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-7 h-7 rounded bg-[#fef3c7] flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-[#d97706]" viewBox="0 0 24 24" fill="currentColor">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
           </svg>
         </div>
       );
     case "tool":
       return (
-        <div className="w-5 h-5 rounded bg-[#d1fae5] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#059669]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-7 h-7 rounded bg-[#d1fae5] flex items-center justify-center flex-shrink-0">
+          <svg className="w-4 h-4 text-[#059669]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
           </svg>
         </div>
@@ -124,15 +124,15 @@ function LLMDetail({ data }: { data: LLMCall }) {
       <CollapsibleSection title="Output">
         {data.response_content ? (
           <>
-            <div className="text-[11px] text-[#6b7280] uppercase mb-2">Text</div>
-            <div className="code-block text-[13px] text-[#1f2937] whitespace-pre-wrap">
+            <div className="text-[12px] text-[#6b7280] uppercase mb-3">Text</div>
+            <div className="code-block text-[14px] text-[#1f2937] whitespace-pre-wrap">
               {data.response_content}
             </div>
           </>
         ) : data.response_tool_calls && data.response_tool_calls.length > 0 ? (
           <JsonSyntaxHighlight data={data.response_tool_calls} />
         ) : (
-          <div className="text-[13px] text-[#6b7280]">No output</div>
+          <div className="text-[14px] text-[#6b7280]">No output</div>
         )}
       </CollapsibleSection>
     </>
@@ -163,14 +163,14 @@ export default function StepDetail({ node }: StepDetailProps) {
   return (
     <div className="h-full overflow-y-auto bg-white">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-[#e5e7eb] px-4 py-3 z-10">
+      <div className="sticky top-0 bg-white border-b border-[#e5e7eb] px-5 py-4 z-10">
         <div className="flex items-center gap-3">
           {getIcon(node.type)}
-          <span className="text-[14px] font-medium text-[#1f2937]">
+          <span className="text-[16px] font-semibold text-[#1f2937]">
             {node.type === "agent" ? "Session" : node.type === "llm" ? "llm" : node.name}
           </span>
           {node.type === "llm" && (
-            <span className="text-[13px] text-[#6b7280]">{node.name}</span>
+            <span className="text-[14px] text-[#6b7280]">{node.name}</span>
           )}
         </div>
       </div>

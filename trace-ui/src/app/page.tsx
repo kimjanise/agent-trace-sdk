@@ -53,34 +53,34 @@ export default function Home() {
     <main className="min-h-screen bg-[#f9fafb]">
       {/* Top Header Bar - Galileo style */}
       <header className="bg-white border-b border-[#e5e7eb]">
-        <div className="flex items-center justify-between px-4 h-12">
+        <div className="flex items-center justify-between px-6 h-14">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-[13px]">
+          <div className="flex items-center gap-2 text-[14px]">
             <span className="text-[#6b7280] hover:text-[#1f2937] cursor-pointer">
               AgentTrace
             </span>
-            <ChevronRight className="w-4 h-4 text-[#9ca3af]" />
+            <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
             <span className="text-[#6b7280] hover:text-[#1f2937] cursor-pointer">
               Log Stream: DefaultStream
             </span>
-            <ChevronRight className="w-4 h-4 text-[#9ca3af]" />
+            <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
             <span className="text-[#1f2937] font-medium">
               All Sessions
             </span>
           </div>
 
           {/* Right actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <button
               onClick={loadTraces}
               disabled={loading}
-              className="flex items-center gap-2 text-[13px] text-[#6b7280] hover:text-[#1f2937] px-3 py-1.5 rounded hover:bg-[#f3f4f6] transition-colors"
+              className="flex items-center gap-2 text-[14px] text-[#6b7280] hover:text-[#1f2937] px-4 py-2 rounded hover:bg-[#f3f4f6] transition-colors"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </button>
-            <button className="flex items-center gap-2 text-[13px] text-[#6b7280] hover:text-[#1f2937] px-3 py-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-              <Share2 className="w-4 h-4" />
+            <button className="flex items-center gap-2 text-[14px] text-[#6b7280] hover:text-[#1f2937] px-4 py-2 rounded hover:bg-[#f3f4f6] transition-colors">
+              <Share2 className="w-5 h-5" />
               Share
             </button>
           </div>
@@ -89,23 +89,23 @@ export default function Home() {
 
       {/* Secondary Header with Tabs */}
       <div className="bg-white border-b border-[#e5e7eb]">
-        <div className="flex items-center justify-between px-4">
+        <div className="flex items-center justify-between px-6">
           {/* Tabs */}
           <div className="flex items-center">
-            <button className="tab active">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#1f2937] border-b-2 border-[#6366f1] font-medium">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
               Messages
             </button>
-            <button className="tab">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#6b7280] border-b-2 border-transparent hover:text-[#1f2937]">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
               Latency
             </button>
-            <button className="tab">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#6b7280] border-b-2 border-transparent hover:text-[#1f2937]">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="12" cy="12" r="10" />
                 <line x1="2" y1="12" x2="22" y2="12" />
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
@@ -115,12 +115,12 @@ export default function Home() {
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-4">
-            <span className="text-[13px] text-[#6b7280]">
+          <div className="flex items-center gap-5">
+            <span className="text-[14px] text-[#6b7280]">
               {traces.length} sessions
             </span>
-            <button className="btn-primary flex items-center gap-2">
-              <Settings className="w-4 h-4" />
+            <button className="bg-[#6366f1] hover:bg-[#4f46e5] text-white px-4 py-2.5 rounded-lg text-[14px] font-medium flex items-center gap-2 transition-colors">
+              <Settings className="w-5 h-5" />
               Configure Metrics
             </button>
           </div>

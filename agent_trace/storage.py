@@ -95,8 +95,8 @@ class SupabaseTraceStore(TraceStore):
         trace_data = {
             "trace_id": trace.trace_id,
             "agent_name": trace.agent_name,
-            "input": str(trace.input) if trace.input else None,
-            "output": str(trace.output) if trace.output else None,
+            "input": str(trace.input) if trace.input is not None else None,
+            "output": str(trace.output) if trace.output is not None else None,
             "error": trace.error,
             "started_at": trace.started_at.isoformat(),
             "ended_at": trace.ended_at.isoformat() if trace.ended_at else None,

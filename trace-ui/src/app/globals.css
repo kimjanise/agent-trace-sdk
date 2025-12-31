@@ -28,10 +28,37 @@ body {
   color: var(--foreground);
   background: var(--background-secondary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Slide-in panel animation */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.slide-panel {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+.fade-overlay {
+  animation: fadeIn 0.3s ease-out;
 }
 
 /* Custom scrollbar - thin like Galileo */
@@ -77,12 +104,12 @@ body {
 /* Code block styling */
 .code-block {
   font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.7;
   background: #ffffff;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px 16px;
+  border-radius: 8px;
+  padding: 16px 20px;
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;

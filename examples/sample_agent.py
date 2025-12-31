@@ -34,7 +34,7 @@ def sample_agent(query: str) -> str:
             if function_name == "get_weather":
                 result = get_weather(**arguments)
                 messages.append({
-                    "role": "function",
+                    "role": "tool",
                     "name": function_name,
                     "content": json.dumps(result),
                     "tool_call_id": tool_call.id
@@ -42,13 +42,18 @@ def sample_agent(query: str) -> str:
             elif function_name == "get_date":
                 result = get_date(**arguments)
                 messages.append({
-                    "role": "function",
+                    "role": "tool",
                     "name": function_name,
                     "content": json.dumps(result),
                     "tool_call_id": tool_call.id
                 })
     
-    return response.choices[0].message.content
+    final_response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages,
+    )
+
+    return final_response.choices[0].message.content
 
 if __name__ == "__main__":
     result = sample_agent("What's the weather in San Francisco? What is the date?")

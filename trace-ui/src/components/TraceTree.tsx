@@ -14,24 +14,24 @@ function getIcon(type: string) {
   switch (type) {
     case "agent":
       return (
-        <div className="w-5 h-5 rounded bg-[#eef2ff] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-6 h-6 rounded bg-[#eef2ff] flex items-center justify-center flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
           </svg>
         </div>
       );
     case "llm":
       return (
-        <div className="w-5 h-5 rounded bg-[#fef3c7] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#d97706]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-6 h-6 rounded bg-[#fef3c7] flex items-center justify-center flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-[#d97706]" viewBox="0 0 24 24" fill="currentColor">
             <rect x="3" y="3" width="18" height="18" rx="2"/>
           </svg>
         </div>
       );
     case "tool":
       return (
-        <div className="w-5 h-5 rounded bg-[#d1fae5] flex items-center justify-center flex-shrink-0">
-          <svg className="w-3 h-3 text-[#059669]" viewBox="0 0 24 24" fill="currentColor">
+        <div className="w-6 h-6 rounded bg-[#d1fae5] flex items-center justify-center flex-shrink-0">
+          <svg className="w-3.5 h-3.5 text-[#059669]" viewBox="0 0 24 24" fill="currentColor">
             <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
           </svg>
         </div>
@@ -89,10 +89,10 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
       <div
         onClick={() => onSelectNode(node)}
         className={`
-          relative flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors
+          relative flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors
           ${isSelected ? "bg-[#eef2ff]" : "hover:bg-[#f9fafb]"}
         `}
-        style={{ paddingLeft: depth > 0 ? `${depth * 24 + 12}px` : "12px" }}
+        style={{ paddingLeft: depth > 0 ? `${depth * 28 + 16}px` : "16px" }}
       >
         {/* Expand/collapse button */}
         {hasChildren ? (
@@ -101,16 +101,16 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
               e.stopPropagation();
               setExpanded(!expanded);
             }}
-            className="p-0.5 hover:bg-[#e5e7eb] rounded flex-shrink-0"
+            className="p-1 hover:bg-[#e5e7eb] rounded flex-shrink-0"
           >
             {expanded ? (
-              <ChevronDown className="w-3.5 h-3.5 text-[#6b7280]" />
+              <ChevronDown className="w-4 h-4 text-[#6b7280]" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-[#6b7280]" />
+              <ChevronRight className="w-4 h-4 text-[#6b7280]" />
             )}
           </button>
         ) : (
-          <div className="w-4" />
+          <div className="w-5" />
         )}
 
         {/* Icon */}
@@ -119,25 +119,25 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
         {/* Name and type */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium text-[#1f2937] truncate">
+            <span className="text-[14px] font-medium text-[#1f2937] truncate">
               {node.type === "agent" ? "Session" : node.type === "llm" ? "llm" : node.name}
             </span>
             {node.type === "llm" && (
-              <span className="text-[12px] text-[#6b7280]">{node.name}</span>
+              <span className="text-[13px] text-[#6b7280]">{node.name}</span>
             )}
           </div>
         </div>
 
         {/* Duration badge */}
         {node.duration_ms !== null && (
-          <span className="text-[11px] text-[#6b7280] bg-[#f3f4f6] px-1.5 py-0.5 rounded flex-shrink-0">
+          <span className="text-[12px] text-[#6b7280] bg-[#f3f4f6] px-2 py-1 rounded flex-shrink-0">
             {formatDuration(node.duration_ms)}
           </span>
         )}
 
         {/* Cost badge (only for nodes with tokens) */}
         {node.tokens !== undefined && node.tokens > 0 && (
-          <span className="text-[11px] text-[#6b7280] bg-[#f3f4f6] px-1.5 py-0.5 rounded flex-shrink-0">
+          <span className="text-[12px] text-[#6b7280] bg-[#f3f4f6] px-2 py-1 rounded flex-shrink-0">
             {formatCost(node.tokens)}
           </span>
         )}
