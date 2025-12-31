@@ -4,6 +4,7 @@ import asyncio
 import inspect
 from .models import Trace
 from .context import TraceContext, AsyncTraceContext, get_current_trace
+from .config import get_config
 
 
 class AgentWrapper:    
@@ -43,29 +44,39 @@ class AgentWrapper:
         trace = Trace(agent_name=self._name)
         trace.input = self._capture_input(args, kwargs)
         self._last_trace = trace
-        
+
         with TraceContext(trace):
             try:
                 result = self._func(*args, **kwargs)
                 trace.complete(output=result)
+                self._auto_save(trace)
                 return result
             except Exception as e:
                 trace.complete(error=str(e))
+                self._auto_save(trace)
                 raise
     
     async def _call_async(self, *args, **kwargs) -> Any:
         trace = Trace(agent_name=self._name)
         trace.input = self._capture_input(args, kwargs)
         self._last_trace = trace
-        
+
         async with AsyncTraceContext(trace):
             try:
                 result = await self._func(*args, **kwargs)
                 trace.complete(output=result)
+                self._auto_save(trace)
                 return result
             except Exception as e:
                 trace.complete(error=str(e))
+                self._auto_save(trace)
                 raise
+
+    def _auto_save(self, trace: Trace) -> None:
+        """Auto-save trace if a store is configured."""
+        config = get_config()
+        if config.store is not None:
+            config.store.save(trace)
 
 
 def agent(func: Callable = None, *, name: str = None) -> Union[AgentWrapper, Callable]:

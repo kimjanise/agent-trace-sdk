@@ -21,14 +21,18 @@ from .tool import tool, ToolWrapper
 from .clients.openai_client import traced_client
 from .agent import agent, AgentWrapper, get_trace
 from .context import get_current_trace, TraceContext
-from .storage import TraceStore, InMemoryTraceStore, FileTraceStore
+from .storage import TraceStore, InMemoryTraceStore, FileTraceStore, SupabaseTraceStore
+from .config import configure
 
 __version__ = "0.1.0"
 
 __all__ = [
-    "tool", "agent", "traced_client", "get_trace",
+    "tool", "agent", "traced_client", "get_trace", "configure",
     "Trace", "LLMCall", "ToolExecution", "TraceStatus",
     "ToolWrapper", "AgentWrapper",
     "get_current_trace", "TraceContext",
-    "TraceStore", "InMemoryTraceStore", "FileTraceStore",
+    "TraceStore", "InMemoryTraceStore", "FileTraceStore", "SupabaseTraceStore",
 ]
+
+# Auto-configure from environment variables on import
+configure()

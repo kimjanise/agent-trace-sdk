@@ -1,9 +1,6 @@
 from agent_trace import tool, agent, traced_client
-from openai import OpenAI;
-from dotenv import load_dotenv
+from openai import OpenAI
 import json
-
-load_dotenv()
 
 @tool
 def get_weather(location: str) -> dict:
