@@ -123,7 +123,7 @@ def traced_client(client: Any, provider: str = None) -> Any:
     client_type = type(client).__name__
     client_module = type(client).__module__
     
-    if "openai" in client_module.lower() or client_type in ("OpenAI", "MockOpenAIClient"):
+    if "openai" in client_module.lower() or client_type in ("OpenAI"):
         return TracedOpenAIClient(client, provider or "openai")
     
     import warnings

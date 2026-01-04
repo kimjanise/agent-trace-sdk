@@ -43,14 +43,6 @@ function getIcon(type: string, hasError: boolean = false) {
 
 function formatDuration(ms: number | null) {
   if (ms === null) return "";
-  if (ms >= 60000) {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-  }
-  if (ms >= 10000) {
-    return `${(ms / 1000).toFixed(1)} sec`;
-  }
   return `${ms} ms`;
 }
 

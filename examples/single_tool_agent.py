@@ -6,10 +6,6 @@ import json
 def get_weather(location: str) -> dict:
     return {"location": location, "temperature": 72, "conditions": "sunny"}
 
-@tool
-def get_date(location: str) -> dict:
-    return {"day": 17, "month": 5, "year": 2004}
-
 sample_client = OpenAI();
 client = traced_client(sample_client)
 
@@ -56,4 +52,4 @@ def single_tool_agent(query: str) -> str:
     return final_response.choices[0].message.content
 
 if __name__ == "__main__":
-    result = single_tool_agent("What's the weather in San Francisco? What is the date?")
+    result = single_tool_agent("What's the weather in San Francisco?")

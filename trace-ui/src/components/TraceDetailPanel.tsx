@@ -1,8 +1,8 @@
 "use client";
 
-import { Trace, LLMCall, ToolExecution, TreeNode } from "@/types/trace";
+import { Trace, ToolExecution, TreeNode, LLMCall } from "@/types/trace";
 import { X, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getLLMCalls, getToolExecutions } from "@/lib/supabase";
 import TraceTree from "./TraceTree";
 import StepDetail from "./StepDetail";
@@ -13,19 +13,6 @@ interface TraceDetailPanelProps {
   traceIndex: number;
   totalTraces: number;
   onNavigate: (direction: "prev" | "next") => void;
-}
-
-function formatDuration(ms: number | null) {
-  if (ms === null) return "—";
-  if (ms >= 60000) {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-  }
-  if (ms >= 10000) {
-    return `${(ms / 1000).toFixed(1)} sec`;
-  }
-  return `${ms} ms`;
 }
 
 function buildTree(
@@ -121,7 +108,36 @@ export default function TraceDetailPanel({
   const [tree, setTree] = useState<TreeNode | null>(null);
   const [selectedNode, setSelectedNode] = useState<TreeNode | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"metrics" | "parameters" | "insights">("metrics");
+  const [panelWidth, setPanelWidth] = useState(typeof window !== "undefined" ? window.innerWidth * (2/3) : 900);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const minWidth = 600;
+  const maxWidth = typeof window !== "undefined" ? window.innerWidth * 0.75 : 1200;
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing) return;
+    const newWidth = window.innerWidth - e.clientX;
+    setPanelWidth(Math.min(Math.max(newWidth, minWidth), maxWidth));
+  }, [isResizing, maxWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
+    }
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   useEffect(() => {
     async function loadTraceDetails() {
@@ -154,7 +170,17 @@ export default function TraceDetailPanel({
       />
 
       {/* Slide-in panel */}
-      <div className="fixed inset-y-0 right-0 w-[1100px] max-w-[90vw] bg-white z-50 flex flex-col shadow-2xl slide-panel">
+      <div
+        className="fixed inset-y-0 right-0 bg-white z-50 flex flex-col shadow-2xl slide-panel"
+        style={{ width: `${panelWidth}px` }}
+      >
+        {/* Resize handle */}
+        <div
+          onMouseDown={() => setIsResizing(true)}
+          className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize transition-colors z-10 ${
+            isResizing ? "bg-[#6366f1]" : "hover:bg-[#6366f1]/50"
+          }`}
+        />
         {/* Top Header - Galileo style */}
         <header className="flex items-center justify-between px-5 h-14 border-b border-[#e5e7eb] bg-white">
         <div className="flex items-center gap-4">
@@ -208,31 +234,6 @@ export default function TraceDetailPanel({
           <>
             {/* Left Sidebar - Tree View */}
             <div className="w-[320px] border-r border-[#e5e7eb] flex flex-col bg-white">
-              {/* Condense steps toggle */}
-              <div className="px-5 py-4 border-b border-[#e5e7eb]">
-                <div className="flex items-center gap-3">
-                  <div className="toggle-switch" />
-                  <span className="text-[14px] text-[#6b7280]">Condense steps</span>
-                </div>
-              </div>
-
-              {/* Filters */}
-              <div className="px-5 py-4 border-b border-[#e5e7eb] flex items-center gap-3">
-                <select className="galileo-select text-[13px] py-2 px-3">
-                  <option>Type...</option>
-                </select>
-                <select className="galileo-select text-[13px] py-2 px-3">
-                  <option>Lat...</option>
-                </select>
-                <button className="p-2 hover:bg-[#f3f4f6] rounded">
-                  <svg className="w-5 h-5 text-[#6b7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
-                </button>
-              </div>
-
-              {/* Tree */}
               <div className="flex-1 overflow-y-auto">
                 <TraceTree
                   tree={tree}
@@ -242,8 +243,8 @@ export default function TraceDetailPanel({
               </div>
             </div>
 
-            {/* Middle Content - Step Detail */}
-            <div className="flex-1 overflow-hidden border-r border-[#e5e7eb]">
+            {/* Main Content - Step Detail */}
+            <div className="flex-1 overflow-hidden">
               {selectedNode ? (
                 <StepDetail node={selectedNode} />
               ) : (
@@ -251,98 +252,6 @@ export default function TraceDetailPanel({
                   Select a step to view details
                 </div>
               )}
-            </div>
-
-            {/* Right Sidebar - Metrics */}
-            <div className="w-[300px] bg-white flex flex-col">
-              {/* Tabs */}
-              <div className="flex border-b border-[#e5e7eb]">
-                <button
-                  onClick={() => setActiveTab("metrics")}
-                  className={`flex-1 py-3.5 text-[14px] font-medium border-b-2 transition-colors ${
-                    activeTab === "metrics"
-                      ? "text-[#1f2937] border-[#6366f1]"
-                      : "text-[#6b7280] border-transparent hover:text-[#1f2937]"
-                  }`}
-                >
-                  Metrics
-                </button>
-                <button
-                  onClick={() => setActiveTab("parameters")}
-                  className={`flex-1 py-3.5 text-[14px] font-medium border-b-2 transition-colors ${
-                    activeTab === "parameters"
-                      ? "text-[#1f2937] border-[#6366f1]"
-                      : "text-[#6b7280] border-transparent hover:text-[#1f2937]"
-                  }`}
-                >
-                  Parameters
-                </button>
-                <button
-                  onClick={() => setActiveTab("insights")}
-                  className={`flex-1 py-3.5 text-[14px] font-medium border-b-2 transition-colors ${
-                    activeTab === "insights"
-                      ? "text-[#1f2937] border-[#6366f1]"
-                      : "text-[#6b7280] border-transparent hover:text-[#1f2937]"
-                  }`}
-                >
-                  Insights
-                </button>
-              </div>
-
-              {/* Metrics Content */}
-              <div className="flex-1 overflow-y-auto p-5">
-                {activeTab === "metrics" && selectedNode && (
-                  <div className="space-y-5">
-                    <h3 className="text-[14px] font-semibold text-[#1f2937]">System Metrics</h3>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
-                        <span className="text-[14px] text-[#6b7280]">Cost</span>
-                        <span className="text-[14px] text-[#1f2937] font-medium">
-                          ${((selectedNode.tokens || 0) * 0.000002).toFixed(4)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
-                        <span className="text-[14px] text-[#6b7280]">Latency</span>
-                        <span className="text-[14px] text-[#1f2937] font-medium">
-                          {formatDuration(selectedNode.duration_ms)}
-                        </span>
-                      </div>
-                      {selectedNode.type === "llm" && (
-                        <>
-                          <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
-                            <span className="text-[14px] text-[#6b7280]">Num Input Tokens</span>
-                            <span className="text-[14px] text-[#1f2937] font-medium">
-                              {(selectedNode.data as LLMCall).prompt_tokens || 0}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
-                            <span className="text-[14px] text-[#6b7280]">Num Output Tokens</span>
-                            <span className="text-[14px] text-[#1f2937] font-medium">
-                              {(selectedNode.data as LLMCall).completion_tokens || 0}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                      <div className="flex items-center justify-between py-3 border-b border-[#f3f4f6]">
-                        <span className="text-[14px] text-[#6b7280]">Num Total Tokens</span>
-                        <span className="text-[14px] text-[#1f2937] font-medium">
-                          {selectedNode.tokens || 0}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {activeTab === "parameters" && (
-                  <div className="text-[14px] text-[#6b7280]">
-                    No parameters available
-                  </div>
-                )}
-                {activeTab === "insights" && (
-                  <div className="text-[14px] text-[#6b7280]">
-                    No insights available
-                  </div>
-                )}
-              </div>
             </div>
           </>
         ) : (

@@ -63,7 +63,6 @@ def record_llm_call(llm_call: LLMCall) -> None:
 def record_tool_execution(execution: ToolExecution) -> None:
     trace = get_current_trace()
     if trace is not None:
-        # First try active LLM call context, then fall back to last LLM call with tools
         llm_call = get_current_llm_call()
         if llm_call is None:
             llm_call = get_last_llm_call_with_tools()
@@ -72,7 +71,6 @@ def record_tool_execution(execution: ToolExecution) -> None:
         trace.add_tool_execution(execution)
 
 
-# Async versions
 class AsyncTraceContext:
     def __init__(self, trace: Trace):
         self.trace = trace

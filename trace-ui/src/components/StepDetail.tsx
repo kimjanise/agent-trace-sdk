@@ -92,9 +92,28 @@ function getIcon(type: string) {
   }
 }
 
+function MetricsRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between py-2">
+      <span className="text-[13px] text-[#6b7280]">{label}</span>
+      <span className="text-[13px] text-[#1f2937] font-medium">{value}</span>
+    </div>
+  );
+}
+
 function AgentDetail({ data }: { data: Trace }) {
+  const cost = ((data.total_tokens || 0) * 0.000002).toFixed(4);
+
   return (
     <>
+      <CollapsibleSection title="Metrics">
+        <div className="divide-y divide-[#f3f4f6]">
+          <MetricsRow label="Cost" value={`$${cost}`} />
+          <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
+          <MetricsRow label="Total Tokens" value={data.total_tokens || 0} />
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection title="Input">
         <JsonSyntaxHighlight data={{ content: data.input }} />
       </CollapsibleSection>
@@ -115,8 +134,20 @@ function AgentDetail({ data }: { data: Trace }) {
 }
 
 function LLMDetail({ data }: { data: LLMCall }) {
+  const cost = ((data.total_tokens || 0) * 0.000002).toFixed(4);
+
   return (
     <>
+      <CollapsibleSection title="Metrics">
+        <div className="divide-y divide-[#f3f4f6]">
+          <MetricsRow label="Cost" value={`$${cost}`} />
+          <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
+          <MetricsRow label="Input Tokens" value={data.prompt_tokens || 0} />
+          <MetricsRow label="Output Tokens" value={data.completion_tokens || 0} />
+          <MetricsRow label="Total Tokens" value={data.total_tokens || 0} />
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection title="Input">
         <JsonSyntaxHighlight data={data.request_messages || []} />
       </CollapsibleSection>
@@ -142,6 +173,13 @@ function LLMDetail({ data }: { data: LLMCall }) {
 function ToolDetail({ data }: { data: ToolExecution }) {
   return (
     <>
+      <CollapsibleSection title="Metrics">
+        <div className="divide-y divide-[#f3f4f6]">
+          <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
+          <MetricsRow label="Status" value={data.status} />
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection title="Input">
         <JsonSyntaxHighlight data={data.arguments || {}} />
       </CollapsibleSection>

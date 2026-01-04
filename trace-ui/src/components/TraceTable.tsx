@@ -34,14 +34,6 @@ function getStatusBadge(status: string) {
 
 function formatDuration(ms: number | null) {
   if (ms === null) return "—";
-  if (ms >= 60000) {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-  }
-  if (ms >= 10000) {
-    return `${(ms / 1000).toFixed(1)} sec`;
-  }
   return `${ms} ms`;
 }
 
@@ -61,16 +53,13 @@ export default function TraceTable({
               ID
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Node Type
+              Agent Name
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Node Name
+              Input
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Node Input
-            </th>
-            <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Node Output
+              Output
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
               Status
@@ -104,16 +93,6 @@ export default function TraceTable({
               </td>
               <td className="px-4 py-2.5 text-[15px] font-medium text-[#374151]">
                 {traces.length - 1 - index}
-              </td>
-              <td className="px-4 py-2.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-md bg-[#eef2ff] flex items-center justify-center">
-                    <svg className="w-4 h-4 text-[#6366f1]" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                    </svg>
-                  </div>
-                  <span className="text-[15px] font-medium text-[#1f2937]">Agent</span>
-                </div>
               </td>
               <td className="px-4 py-2.5 text-[15px] font-medium text-[#1f2937]">
                 {trace.agent_name}

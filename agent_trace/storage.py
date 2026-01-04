@@ -66,16 +66,8 @@ class FileTraceStore(TraceStore):
 
 
 class SupabaseTraceStore(TraceStore):
-    """Store traces in Supabase with normalized tables for UI tree-view support."""
 
     def __init__(self, url: str = None, key: str = None):
-        """
-        Initialize Supabase client.
-
-        Args:
-            url: Supabase project URL. Falls back to SUPABASE_URL env var.
-            key: Supabase anon/service key. Falls back to SUPABASE_KEY env var.
-        """
         try:
             from supabase import create_client, Client
         except ImportError:
@@ -91,7 +83,6 @@ class SupabaseTraceStore(TraceStore):
 
     def save(self, trace: Trace) -> None:
         """Save trace with all LLM calls and tool executions."""
-        # Insert trace
         trace_data = {
             "trace_id": trace.trace_id,
             "agent_name": trace.agent_name,
@@ -107,7 +98,6 @@ class SupabaseTraceStore(TraceStore):
         }
         self.client.table("traces").upsert(trace_data).execute()
 
-        # Insert LLM calls
         for llm_call in trace.llm_calls:
             call_data = {
                 "call_id": llm_call.call_id,
