@@ -60,32 +60,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#f9fafb]">
-      {/* Header with Tabs */}
+      {/* Header */}
       <div className="bg-white border-b border-[#e5e7eb]">
-        <div className="flex items-center justify-between px-6">
-          {/* Tabs */}
-          <div className="flex items-center">
-            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#1f2937] border-b-2 border-[#6366f1] font-medium">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              Messages
-            </button>
-            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#6b7280] border-b-2 border-transparent hover:text-[#1f2937]">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-              Latency
-            </button>
-            <button className="flex items-center gap-2 px-4 py-3.5 text-[14px] text-[#6b7280] border-b-2 border-transparent hover:text-[#1f2937]">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-              Trace graph
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-6 py-3">
+          {/* Product Name */}
+          <h1 className="text-[18px] font-semibold text-[#1f2937]">eris</h1>
 
           {/* Right side */}
           <div className="flex items-center gap-5">

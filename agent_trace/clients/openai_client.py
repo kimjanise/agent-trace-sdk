@@ -4,15 +4,34 @@ from ..models import LLMCall, ToolCallRequest, TokenUsage
 from ..context import record_llm_call, set_last_llm_call_with_tools
 
 class TracedOpenAICompletions:
-    def __init__(self, original_completions, provider: str = "openai"):
+    def __init__(self, original_completions, provider: str = "openai", is_async: bool = False):
         self._original = original_completions
         self._provider = provider
+        self._is_async = is_async
 
     def create(self, **kwargs) -> Any:
+        if self._is_async:
+            return self._create_async(**kwargs)
+        return self._create_sync(**kwargs)
+
+    def _create_sync(self, **kwargs) -> Any:
         llm_call = self._create_llm_call(kwargs)
-        
+
         try:
             response = self._original.create(**kwargs)
+            self._record_response(llm_call, response)
+            return response
+        except Exception as e:
+            llm_call.complete()
+            llm_call.response_finish_reason = f"error: {str(e)}"
+            record_llm_call(llm_call)
+            raise
+
+    async def _create_async(self, **kwargs) -> Any:
+        llm_call = self._create_llm_call(kwargs)
+
+        try:
+            response = await self._original.create(**kwargs)
             self._record_response(llm_call, response)
             return response
         except Exception as e:
@@ -91,41 +110,46 @@ class TracedOpenAICompletions:
         record_llm_call(llm_call)
 
 class TracedOpenAIChat:
-    def __init__(self, original_chat, provider: str = "openai"):
+    def __init__(self, original_chat, provider: str = "openai", is_async: bool = False):
         self._original = original_chat
         self._provider = provider
+        self._is_async = is_async
         self._completions = None
-    
+
     @property
     def completions(self) -> TracedOpenAICompletions:
         if self._completions is None:
             self._completions = TracedOpenAICompletions(
-                self._original.completions, self._provider
+                self._original.completions, self._provider, self._is_async
             )
         return self._completions
 
 class TracedOpenAIClient:
-    def __init__(self, original_client, provider: str = "openai"):
+    def __init__(self, original_client, provider: str = "openai", is_async: bool = False):
         self._original = original_client
         self._provider = provider
+        self._is_async = is_async
         self._chat = None
-    
+
     @property
     def chat(self) -> TracedOpenAIChat:
         if self._chat is None:
-            self._chat = TracedOpenAIChat(self._original.chat, self._provider)
+            self._chat = TracedOpenAIChat(self._original.chat, self._provider, self._is_async)
         return self._chat
-    
+
     def __getattr__(self, name: str) -> Any:
         return getattr(self._original, name)
 
 def traced_client(client: Any, provider: str = None) -> Any:
     client_type = type(client).__name__
     client_module = type(client).__module__
-    
-    if "openai" in client_module.lower() or client_type in ("OpenAI"):
-        return TracedOpenAIClient(client, provider or "openai")
-    
+
+    # Detect if it's an async client
+    is_async = "async" in client_type.lower() or "async" in client_module.lower()
+
+    if "openai" in client_module.lower() or client_type in ("OpenAI", "AsyncOpenAI"):
+        return TracedOpenAIClient(client, provider or "openai", is_async)
+
     import warnings
     warnings.warn(f"Unknown client type: {client_type}. Returning unwrapped.")
     return client
