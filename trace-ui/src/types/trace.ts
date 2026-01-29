@@ -55,7 +55,42 @@ export interface ToolExecution {
   status: "pending" | "success" | "error";
 }
 
-export type StepType = "agent" | "llm" | "tool";
+export interface STTCall {
+  call_id: string;
+  trace_id: string;
+  provider: string;
+  model: string;
+  audio_duration_ms: number | null;
+  audio_format: string | null;
+  language: string | null;
+  transcript: string | null;
+  confidence: number | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: "pending" | "success" | "error";
+  error: string | null;
+}
+
+export interface TTSCall {
+  call_id: string;
+  trace_id: string;
+  provider: string;
+  model: string;
+  voice: string | null;
+  input_text: string;
+  input_chars: number;
+  output_audio_duration_ms: number | null;
+  output_format: string | null;
+  voice_settings: Record<string, unknown> | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  status: "pending" | "success" | "error";
+  error: string | null;
+}
+
+export type StepType = "agent" | "llm" | "tool" | "stt" | "tts";
 
 export interface TreeNode {
   id: string;
@@ -64,6 +99,6 @@ export interface TreeNode {
   duration_ms: number | null;
   tokens?: number;
   status?: string;
-  data: Trace | LLMCall | ToolExecution;
+  data: Trace | LLMCall | ToolExecution | STTCall | TTSCall;
   children: TreeNode[];
 }

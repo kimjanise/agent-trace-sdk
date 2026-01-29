@@ -20,22 +20,17 @@ import random
 import os
 import sys
 
-# Add parent directory to path for local development
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent_trace import tool, agent, traced_client, configure, FileTraceStore
+from agent_trace import tool, agent, llm
 from openai import AsyncOpenAI
 
-# Configure tracing - uses Supabase if env vars are set, otherwise no-op
-# The auto-configure in __init__.py handles this via SUPABASE_URL/SUPABASE_KEY env vars
+client = AsyncOpenAI()
 
-
-# --- Async Tools with simulated latency ---
 
 @tool
 async def fetch_stock_price(symbol: str) -> dict:
     """Fetch current stock price for a given symbol."""
-    # Simulate API latency (200-500ms)
     await asyncio.sleep(random.uniform(0.2, 0.5))
 
     prices = {
@@ -58,7 +53,6 @@ async def fetch_stock_price(symbol: str) -> dict:
 @tool
 async def fetch_company_news(company: str) -> dict:
     """Fetch recent news headlines for a company."""
-    # Simulate API latency (300-600ms)
     await asyncio.sleep(random.uniform(0.3, 0.6))
 
     news_templates = [
@@ -77,7 +71,6 @@ async def fetch_company_news(company: str) -> dict:
 @tool
 async def fetch_market_sentiment(sector: str) -> dict:
     """Fetch market sentiment analysis for a sector."""
-    # Simulate API latency (250-450ms)
     await asyncio.sleep(random.uniform(0.25, 0.45))
 
     sentiments = ["bullish", "bearish", "neutral"]
@@ -92,13 +85,12 @@ async def fetch_market_sentiment(sector: str) -> dict:
 @tool
 async def fetch_analyst_ratings(symbol: str) -> dict:
     """Fetch analyst ratings and price targets."""
-    # Simulate API latency (200-400ms)
     await asyncio.sleep(random.uniform(0.2, 0.4))
 
     ratings = ["Strong Buy", "Buy", "Hold", "Sell", "Strong Sell"]
     return {
         "symbol": symbol,
-        "consensus_rating": random.choice(ratings[:3]),  # Bias towards positive
+        "consensus_rating": random.choice(ratings[:3]),
         "price_target": round(random.uniform(150, 250), 2),
         "num_analysts": random.randint(10, 30)
     }
@@ -107,7 +99,6 @@ async def fetch_analyst_ratings(symbol: str) -> dict:
 @tool
 async def calculate_portfolio_metrics(symbols_csv: str) -> dict:
     """Calculate aggregate portfolio metrics. Pass symbols as comma-separated string."""
-    # Simulate computation time (100-200ms)
     await asyncio.sleep(random.uniform(0.1, 0.2))
 
     symbols = [s.strip() for s in symbols_csv.split(",")]
@@ -118,11 +109,6 @@ async def calculate_portfolio_metrics(symbols_csv: str) -> dict:
         "estimated_return": f"{random.uniform(5, 15):.1f}%"
     }
 
-
-# --- Setup traced OpenAI client ---
-
-sample_client = AsyncOpenAI()
-client = traced_client(sample_client)
 
 tools = [
     {"type": "function", "function": fetch_stock_price.schema},
@@ -141,7 +127,14 @@ tool_map = {
 }
 
 
-# --- Parallel Agent ---
+@llm(provider="openai", model="gpt-4o")
+async def call_openai(messages: list, tools: list = None, parallel_tool_calls: bool = False):
+    kwargs = {"model": "gpt-4o", "messages": messages}
+    if tools:
+        kwargs["tools"] = tools
+        kwargs["parallel_tool_calls"] = parallel_tool_calls
+    return await client.chat.completions.create(**kwargs)
+
 
 @agent
 async def parallel_research_agent(query: str) -> str:
@@ -174,11 +167,10 @@ async def parallel_research_agent(query: str) -> str:
     while turn < max_turns:
         turn += 1
 
-        response = await client.chat.completions.create(
-            model="gpt-4o",
+        response = await call_openai(
             messages=messages,
             tools=tools,
-            parallel_tool_calls=True,  # Enable parallel tool calls
+            parallel_tool_calls=True,
         )
 
         message = response.choices[0].message
@@ -188,8 +180,6 @@ async def parallel_research_agent(query: str) -> str:
 
         messages.append(message)
 
-        # Execute ALL tool calls in parallel using asyncio.gather
-        # This creates overlapping timestamps that will show as parallel nodes
         async def execute_tool(tool_call):
             function_name = tool_call.function.name
             arguments = json.loads(tool_call.function.arguments)
@@ -209,24 +199,15 @@ async def parallel_research_agent(query: str) -> str:
                 "tool_call_id": tool_call.id
             }
 
-        # Execute all tools in parallel
         tool_results = await asyncio.gather(
             *[execute_tool(tc) for tc in message.tool_calls]
         )
 
-        # Add all results to messages
         messages.extend(tool_results)
 
-    # Final response if we hit max turns
-    final_response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-    )
-
+    final_response = await call_openai(messages=messages)
     return final_response.choices[0].message.content
 
-
-# --- Sequential Agent for comparison ---
 
 @agent
 async def sequential_research_agent(query: str) -> str:
@@ -249,12 +230,7 @@ async def sequential_research_agent(query: str) -> str:
     while turn < max_turns:
         turn += 1
 
-        response = await client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            tools=tools,
-        )
-
+        response = await call_openai(messages=messages, tools=tools)
         message = response.choices[0].message
 
         if not message.tool_calls:
@@ -262,7 +238,6 @@ async def sequential_research_agent(query: str) -> str:
 
         messages.append(message)
 
-        # Execute tools SEQUENTIALLY (one after another)
         for tool_call in message.tool_calls:
             function_name = tool_call.function.name
             arguments = json.loads(tool_call.function.arguments)
@@ -282,11 +257,7 @@ async def sequential_research_agent(query: str) -> str:
                 "tool_call_id": tool_call.id
             })
 
-    final_response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-    )
-
+    final_response = await call_openai(messages=messages)
     return final_response.choices[0].message.content
 
 

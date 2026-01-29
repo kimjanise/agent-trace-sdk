@@ -1,6 +1,9 @@
-from agent_trace import tool, agent, traced_client
+from agent_trace import tool, agent, llm
 from openai import OpenAI
 import json
+
+client = OpenAI()
+
 
 @tool
 def search_flights(origin: str, destination: str) -> dict:
@@ -16,6 +19,7 @@ def search_flights(origin: str, destination: str) -> dict:
         "note": "Use get_flight_details with a flight_id to see more info before booking"
     }
 
+
 @tool
 def get_flight_details(flight_id: str) -> dict:
     details = {
@@ -26,6 +30,7 @@ def get_flight_details(flight_id: str) -> dict:
     if flight_id not in details:
         return {"error": f"Flight {flight_id} not found"}
     return details[flight_id]
+
 
 @tool
 def check_seat_availability(flight_id: str, seat_class: str) -> dict:
@@ -44,6 +49,7 @@ def check_seat_availability(flight_id: str, seat_class: str) -> dict:
         "can_book": seats > 0
     }
 
+
 @tool
 def book_flight(flight_id: str, seat_class: str, passenger_name: str) -> dict:
     return {
@@ -55,8 +61,6 @@ def book_flight(flight_id: str, seat_class: str, passenger_name: str) -> dict:
         "message": f"Successfully booked {seat_class} seat on flight {flight_id} for {passenger_name}"
     }
 
-sample_client = OpenAI()
-client = traced_client(sample_client)
 
 tools = [
     {"type": "function", "function": search_flights.schema},
@@ -82,6 +86,15 @@ SYSTEM_PROMPT = """You are a flight booking assistant. You MUST follow this exac
 You MUST make these calls in separate steps - do not try to do everything at once.
 Each step depends on information from the previous step."""
 
+
+@llm(provider="openai", model="gpt-4o")
+def call_openai(messages: list, tools: list = None):
+    kwargs = {"model": "gpt-4o", "messages": messages}
+    if tools:
+        kwargs["tools"] = tools
+    return client.chat.completions.create(**kwargs)
+
+
 @agent
 def multi_turn_agent(query: str) -> str:
     messages = [
@@ -95,12 +108,7 @@ def multi_turn_agent(query: str) -> str:
     while turn < max_turns:
         turn += 1
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            tools=tools,
-        )
-
+        response = call_openai(messages=messages, tools=tools)
         message = response.choices[0].message
 
         if not message.tool_calls:
@@ -127,10 +135,7 @@ def multi_turn_agent(query: str) -> str:
                 "tool_call_id": tool_call.id
             })
 
-    final_response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-    )
+    final_response = call_openai(messages=messages)
     return final_response.choices[0].message.content
 
 
@@ -139,3 +144,4 @@ if __name__ == "__main__":
     Find me the cheapest option, verify the details, check business class availability, and book it."""
 
     result = multi_turn_agent(query)
+    print(result)

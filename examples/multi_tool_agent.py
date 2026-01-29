@@ -1,6 +1,9 @@
-from agent_trace import tool, agent, traced_client
+from agent_trace import tool, agent, llm
 from openai import OpenAI
 import json
+
+client = OpenAI()
+
 
 @tool
 def get_weather(location: str) -> dict:
@@ -13,6 +16,7 @@ def get_weather(location: str) -> dict:
     data = weather_data.get(location, {"temperature": 70, "conditions": "unknown", "humidity": 50})
     return {"location": location, **data}
 
+
 @tool
 def get_population(city: str) -> dict:
     populations = {
@@ -23,6 +27,7 @@ def get_population(city: str) -> dict:
     }
     return {"city": city, "population": populations.get(city, "unknown")}
 
+
 @tool
 def compare_cities(city1: str, city2: str, metric: str) -> dict:
     return {
@@ -32,6 +37,7 @@ def compare_cities(city1: str, city2: str, metric: str) -> dict:
         "metric": metric,
         "result": f"{city1} and {city2} have been compared on {metric}"
     }
+
 
 @tool
 def get_recommendation(criteria: str) -> dict:
@@ -46,8 +52,6 @@ def get_recommendation(criteria: str) -> dict:
         "recommendation": recommendations.get(criteria.lower(), "San Francisco - great all-around city")
     }
 
-sample_client = OpenAI()
-client = traced_client(sample_client)
 
 tools = [
     {"type": "function", "function": get_weather.schema},
@@ -63,6 +67,15 @@ tool_map = {
     "get_recommendation": get_recommendation,
 }
 
+
+@llm(provider="openai", model="gpt-4o")
+def call_openai(messages: list, tools: list = None):
+    kwargs = {"model": "gpt-4o", "messages": messages}
+    if tools:
+        kwargs["tools"] = tools
+    return client.chat.completions.create(**kwargs)
+
+
 @agent
 def multi_tool_agent(query: str) -> str:
     messages = [{"role": "user", "content": query}]
@@ -73,12 +86,7 @@ def multi_tool_agent(query: str) -> str:
     while turn < max_turns:
         turn += 1
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            tools=tools,
-        )
-
+        response = call_openai(messages=messages, tools=tools)
         message = response.choices[0].message
 
         if not message.tool_calls:
@@ -105,11 +113,7 @@ def multi_tool_agent(query: str) -> str:
                 "tool_call_id": tool_call.id
             })
 
-    final_response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-    )
-
+    final_response = call_openai(messages=messages)
     return final_response.choices[0].message.content
 
 
@@ -123,3 +127,4 @@ if __name__ == "__main__":
 
     Please gather all this information and give me a comprehensive answer."""
     result = multi_tool_agent(query)
+    print(result)

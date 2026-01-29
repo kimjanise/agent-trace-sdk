@@ -19,6 +19,18 @@ class ToolExecutionStatus(Enum):
     PENDING = "pending"
 
 
+class STTStatus(Enum):
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
+
+
+class TTSStatus(Enum):
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
+
+
 @dataclass
 class ToolExecution:
     execution_id: str = field(default_factory=generate_id)
@@ -65,6 +77,75 @@ class ToolCallRequest:
     tool_name: str
     arguments_raw: str
     arguments_parsed: Optional[dict] = None
+
+
+@dataclass
+class STTCall:
+    call_id: str = field(default_factory=generate_id)
+    provider: str = "unknown"
+    model: str = "unknown"
+
+    audio_duration_ms: Optional[int] = None
+    audio_format: Optional[str] = None
+    language: Optional[str] = None
+
+    transcript: Optional[str] = None
+    confidence: Optional[float] = None
+    word_timestamps: Optional[list] = None
+
+    started_at: datetime = field(default_factory=now)
+    ended_at: Optional[datetime] = None
+    status: STTStatus = STTStatus.PENDING
+    error: Optional[str] = None
+
+    def complete(self, transcript: str = None, error: str = None) -> None:
+        self.ended_at = now()
+        if error:
+            self.error = error
+            self.status = STTStatus.ERROR
+        else:
+            self.transcript = transcript
+            self.status = STTStatus.SUCCESS
+
+    @property
+    def duration_ms(self) -> Optional[int]:
+        if self.ended_at is None:
+            return None
+        return int((self.ended_at - self.started_at).total_seconds() * 1000)
+
+
+@dataclass
+class TTSCall:
+    call_id: str = field(default_factory=generate_id)
+    provider: str = "unknown"
+    model: str = "unknown"
+    voice: Optional[str] = None
+
+    input_text: str = ""
+    input_chars: int = 0
+
+    output_audio_duration_ms: Optional[int] = None
+    output_format: Optional[str] = None
+    voice_settings: Optional[dict] = None
+
+    started_at: datetime = field(default_factory=now)
+    ended_at: Optional[datetime] = None
+    status: TTSStatus = TTSStatus.PENDING
+    error: Optional[str] = None
+
+    def complete(self, error: str = None) -> None:
+        self.ended_at = now()
+        if error:
+            self.error = error
+            self.status = TTSStatus.ERROR
+        else:
+            self.status = TTSStatus.SUCCESS
+
+    @property
+    def duration_ms(self) -> Optional[int]:
+        if self.ended_at is None:
+            return None
+        return int((self.ended_at - self.started_at).total_seconds() * 1000)
 
 
 @dataclass
@@ -127,13 +208,21 @@ class Trace:
     status: TraceStatus = TraceStatus.ACTIVE
     llm_calls: list = field(default_factory=list)
     tool_executions: list = field(default_factory=list)
+    stt_calls: list = field(default_factory=list)
+    tts_calls: list = field(default_factory=list)
     metadata: dict = field(default_factory=dict)
-    
+
     def add_llm_call(self, llm_call: LLMCall) -> None:
         self.llm_calls.append(llm_call)
-    
+
     def add_tool_execution(self, execution: ToolExecution) -> None:
         self.tool_executions.append(execution)
+
+    def add_stt_call(self, stt_call: STTCall) -> None:
+        self.stt_calls.append(stt_call)
+
+    def add_tts_call(self, tts_call: TTSCall) -> None:
+        self.tts_calls.append(tts_call)
     
     def complete(self, output: Any = None, error: str = None) -> None:
         self.ended_at = now()

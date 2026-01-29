@@ -1,6 +1,6 @@
 from contextvars import ContextVar
 from typing import Optional
-from .models import Trace, LLMCall, ToolExecution
+from .models import Trace, LLMCall, ToolExecution, STTCall, TTSCall
 
 
 _current_trace: ContextVar[Optional[Trace]] = ContextVar('current_trace', default=None)
@@ -69,6 +69,18 @@ def record_tool_execution(execution: ToolExecution) -> None:
         if llm_call is not None:
             execution.llm_call_id = llm_call.call_id
         trace.add_tool_execution(execution)
+
+
+def record_stt_call(stt_call: STTCall) -> None:
+    trace = get_current_trace()
+    if trace is not None:
+        trace.add_stt_call(stt_call)
+
+
+def record_tts_call(tts_call: TTSCall) -> None:
+    trace = get_current_trace()
+    if trace is not None:
+        trace.add_tts_call(tts_call)
 
 
 class AsyncTraceContext:

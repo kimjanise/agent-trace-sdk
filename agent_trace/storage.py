@@ -3,7 +3,7 @@ from typing import List, Optional
 from pathlib import Path
 import json
 import os
-from .models import Trace, LLMCall, ToolExecution, TokenUsage, ToolExecutionStatus, TraceStatus
+from .models import Trace, LLMCall, ToolExecution, TokenUsage, ToolExecutionStatus, TraceStatus, STTCall, TTSCall, STTStatus, TTSStatus
 
 
 class TraceStore(ABC):    
@@ -142,8 +142,49 @@ class SupabaseTraceStore(TraceStore):
             }
             self.client.table("tool_executions").upsert(exec_data).execute()
 
+        # Insert STT calls
+        for stt_call in trace.stt_calls:
+            stt_data = {
+                "call_id": stt_call.call_id,
+                "trace_id": trace.trace_id,
+                "provider": stt_call.provider,
+                "model": stt_call.model,
+                "audio_duration_ms": stt_call.audio_duration_ms,
+                "audio_format": stt_call.audio_format,
+                "language": stt_call.language,
+                "transcript": stt_call.transcript,
+                "confidence": stt_call.confidence,
+                "started_at": stt_call.started_at.isoformat(),
+                "ended_at": stt_call.ended_at.isoformat() if stt_call.ended_at else None,
+                "duration_ms": stt_call.duration_ms,
+                "status": stt_call.status.value,
+                "error": stt_call.error,
+            }
+            self.client.table("stt_calls").upsert(stt_data).execute()
+
+        # Insert TTS calls
+        for tts_call in trace.tts_calls:
+            tts_data = {
+                "call_id": tts_call.call_id,
+                "trace_id": trace.trace_id,
+                "provider": tts_call.provider,
+                "model": tts_call.model,
+                "voice": tts_call.voice,
+                "input_text": tts_call.input_text,
+                "input_chars": tts_call.input_chars,
+                "output_audio_duration_ms": tts_call.output_audio_duration_ms,
+                "output_format": tts_call.output_format,
+                "voice_settings": tts_call.voice_settings,
+                "started_at": tts_call.started_at.isoformat(),
+                "ended_at": tts_call.ended_at.isoformat() if tts_call.ended_at else None,
+                "duration_ms": tts_call.duration_ms,
+                "status": tts_call.status.value,
+                "error": tts_call.error,
+            }
+            self.client.table("tts_calls").upsert(tts_data).execute()
+
     def get(self, trace_id: str) -> Optional[Trace]:
-        """Fetch trace with all related LLM calls and tool executions."""
+        """Fetch trace with all related LLM calls, tool executions, STT and TTS calls."""
         # Fetch trace
         result = self.client.table("traces").select("*").eq("trace_id", trace_id).execute()
         if not result.data:
@@ -156,6 +197,12 @@ class SupabaseTraceStore(TraceStore):
 
         # Fetch tool executions
         tool_result = self.client.table("tool_executions").select("*").eq("trace_id", trace_id).execute()
+
+        # Fetch STT calls
+        stt_result = self.client.table("stt_calls").select("*").eq("trace_id", trace_id).execute()
+
+        # Fetch TTS calls
+        tts_result = self.client.table("tts_calls").select("*").eq("trace_id", trace_id).execute()
 
         # Reconstruct Trace object
         from datetime import datetime
@@ -212,6 +259,43 @@ class SupabaseTraceStore(TraceStore):
             )
             trace.tool_executions.append(tool_exec)
 
+        # Reconstruct STT calls
+        for stt_data in stt_result.data:
+            stt_call = STTCall(
+                call_id=stt_data["call_id"],
+                provider=stt_data["provider"],
+                model=stt_data["model"],
+                audio_duration_ms=stt_data["audio_duration_ms"],
+                audio_format=stt_data["audio_format"],
+                language=stt_data["language"],
+                transcript=stt_data["transcript"],
+                confidence=stt_data["confidence"],
+                started_at=datetime.fromisoformat(stt_data["started_at"].replace("Z", "+00:00")),
+                ended_at=datetime.fromisoformat(stt_data["ended_at"].replace("Z", "+00:00")) if stt_data["ended_at"] else None,
+                status=STTStatus(stt_data["status"]),
+                error=stt_data["error"],
+            )
+            trace.stt_calls.append(stt_call)
+
+        # Reconstruct TTS calls
+        for tts_data in tts_result.data:
+            tts_call = TTSCall(
+                call_id=tts_data["call_id"],
+                provider=tts_data["provider"],
+                model=tts_data["model"],
+                voice=tts_data["voice"],
+                input_text=tts_data["input_text"],
+                input_chars=tts_data["input_chars"],
+                output_audio_duration_ms=tts_data["output_audio_duration_ms"],
+                output_format=tts_data["output_format"],
+                voice_settings=tts_data["voice_settings"],
+                started_at=datetime.fromisoformat(tts_data["started_at"].replace("Z", "+00:00")),
+                ended_at=datetime.fromisoformat(tts_data["ended_at"].replace("Z", "+00:00")) if tts_data["ended_at"] else None,
+                status=TTSStatus(tts_data["status"]),
+                error=tts_data["error"],
+            )
+            trace.tts_calls.append(tts_call)
+
         return trace
 
     def list(self, limit: int = 100) -> List[dict]:
@@ -230,4 +314,14 @@ class SupabaseTraceStore(TraceStore):
         if llm_call_id:
             query = query.eq("llm_call_id", llm_call_id)
         result = query.order("started_at").execute()
+        return result.data
+
+    def get_stt_calls(self, trace_id: str) -> List[dict]:
+        """Fetch STT calls for a trace."""
+        result = self.client.table("stt_calls").select("*").eq("trace_id", trace_id).order("started_at").execute()
+        return result.data
+
+    def get_tts_calls(self, trace_id: str) -> List[dict]:
+        """Fetch TTS calls for a trace."""
+        result = self.client.table("tts_calls").select("*").eq("trace_id", trace_id).order("started_at").execute()
         return result.data
