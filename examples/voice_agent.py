@@ -124,8 +124,8 @@ def play_audio(file_path: str):
         subprocess.run(["aplay", file_path], check=True)
 
 @stt(provider="deepgram", model="nova-2")
-def transcribe_audio(audio_path: str) -> str:
-    """Transcribe audio file using Deepgram."""
+def transcribe_audio(audio_path: str):
+    """Transcribe audio file using Deepgram. Returns full response for tracing."""
     with open(audio_path, "rb") as audio_file:
         buffer_data = audio_file.read()
 
@@ -135,8 +135,8 @@ def transcribe_audio(audio_path: str) -> str:
         smart_format=True,
         language="en",
     )
-    transcript = response.results.channels[0].alternatives[0].transcript
-    return transcript
+    # Return full response - decorator will extract transcript and duration
+    return response
 
 @llm(provider="openai", model="gpt-4o")
 def generate_response(user_message: str, conversation_history: list):
@@ -154,7 +154,7 @@ def generate_response(user_message: str, conversation_history: list):
 
     return response  # Return full response so SDK can extract tokens
 
-@tts(provider="elevenlabs", voice="rachel")
+@tts(provider="elevenlabs", model="eleven_multilingual_v2", voice="rachel")
 def synthesize_speech(text: str, output_path: str = None) -> bytes:
     """Convert text to speech using ElevenLabs."""
     audio_generator = elevenlabs.text_to_speech.convert(
@@ -191,7 +191,8 @@ def voice_agent(audio_path: str = None, text_input: str = None) -> dict:
     # Step 1: Get user input (either from audio or direct text)
     if audio_path:
         print(f"Transcribing: {audio_path}")
-        user_message = transcribe_audio(audio_path)
+        stt_response = transcribe_audio(audio_path)
+        user_message = stt_response.results.channels[0].alternatives[0].transcript
         print(f"Transcript: {user_message}")
     elif text_input:
         user_message = text_input
@@ -236,7 +237,8 @@ def interactive_session():
 
             try:
                 print("Transcribing...")
-                user_message = transcribe_audio(audio_path)
+                stt_response = transcribe_audio(audio_path)
+                user_message = stt_response.results.channels[0].alternatives[0].transcript
                 print(f"You: {user_message}")
 
                 if not user_message.strip():

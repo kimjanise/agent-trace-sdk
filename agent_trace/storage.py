@@ -107,6 +107,7 @@ class SupabaseTraceStore(TraceStore):
                 "trace_id": trace.trace_id,
                 "provider": llm_call.provider,
                 "model": llm_call.model,
+                "function_name": llm_call.function_name,
                 "request_messages": llm_call.request_messages,
                 "request_tools": llm_call.request_tools,
                 "request_system_prompt": llm_call.request_system_prompt,
@@ -152,6 +153,7 @@ class SupabaseTraceStore(TraceStore):
                 "trace_id": trace.trace_id,
                 "provider": stt_call.provider,
                 "model": stt_call.model,
+                "function_name": stt_call.function_name,
                 "audio_duration_ms": stt_call.audio_duration_ms,
                 "audio_format": stt_call.audio_format,
                 "language": stt_call.language,
@@ -172,6 +174,7 @@ class SupabaseTraceStore(TraceStore):
                 "trace_id": trace.trace_id,
                 "provider": tts_call.provider,
                 "model": tts_call.model,
+                "function_name": tts_call.function_name,
                 "voice": tts_call.voice,
                 "input_text": tts_call.input_text,
                 "input_chars": tts_call.input_chars,
@@ -392,6 +395,8 @@ class ThreadedSupabaseTraceStore(TraceStore):
 
     def _do_save(self, trace: Trace):
         """Actually save the trace (runs in background thread)."""
+        import sys
+        print(f"[agent-trace] Saving trace {trace.trace_id} with {len(trace.llm_calls)} LLM, {len(trace.stt_calls)} STT, {len(trace.tts_calls)} TTS calls", file=sys.stderr)
         client = self._get_client()
 
         trace_data = {
@@ -408,33 +413,39 @@ class ThreadedSupabaseTraceStore(TraceStore):
             "duration_ms": trace.duration_ms,
         }
         client.table("traces").upsert(trace_data).execute()
+        print(f"[agent-trace] Saved trace", file=sys.stderr)
 
         for llm_call in trace.llm_calls:
-            call_data = {
-                "call_id": llm_call.call_id,
-                "trace_id": trace.trace_id,
-                "provider": llm_call.provider,
-                "model": llm_call.model,
-                "request_messages": llm_call.request_messages,
-                "request_tools": llm_call.request_tools,
-                "request_system_prompt": llm_call.request_system_prompt,
-                "request_temperature": llm_call.request_temperature,
-                "request_max_tokens": llm_call.request_max_tokens,
-                "response_content": llm_call.response_content,
-                "response_tool_calls": [
-                    {"tool_call_id": tc.tool_call_id, "tool_name": tc.tool_name, "arguments_raw": tc.arguments_raw}
-                    for tc in llm_call.response_tool_calls
-                ] if llm_call.response_tool_calls else [],
-                "response_finish_reason": llm_call.response_finish_reason,
-                "prompt_tokens": llm_call.usage.prompt_tokens,
-                "completion_tokens": llm_call.usage.completion_tokens,
-                "total_tokens": llm_call.usage.total_tokens,
-                "started_at": llm_call.started_at.isoformat(),
-                "ended_at": llm_call.ended_at.isoformat() if llm_call.ended_at else None,
-                "duration_ms": llm_call.duration_ms,
-                "streaming": llm_call.streaming,
-            }
-            client.table("llm_calls").upsert(call_data).execute()
+            try:
+                call_data = {
+                    "call_id": llm_call.call_id,
+                    "trace_id": trace.trace_id,
+                    "provider": llm_call.provider,
+                    "model": llm_call.model,
+                    "function_name": llm_call.function_name,
+                    "request_messages": llm_call.request_messages,
+                    "request_tools": llm_call.request_tools,
+                    "request_system_prompt": llm_call.request_system_prompt,
+                    "request_temperature": llm_call.request_temperature,
+                    "request_max_tokens": llm_call.request_max_tokens,
+                    "response_content": llm_call.response_content,
+                    "response_tool_calls": [
+                        {"tool_call_id": tc.tool_call_id, "tool_name": tc.tool_name, "arguments_raw": tc.arguments_raw}
+                        for tc in llm_call.response_tool_calls
+                    ] if llm_call.response_tool_calls else [],
+                    "response_finish_reason": llm_call.response_finish_reason,
+                    "prompt_tokens": llm_call.usage.prompt_tokens,
+                    "completion_tokens": llm_call.usage.completion_tokens,
+                    "total_tokens": llm_call.usage.total_tokens,
+                    "started_at": llm_call.started_at.isoformat(),
+                    "ended_at": llm_call.ended_at.isoformat() if llm_call.ended_at else None,
+                    "duration_ms": llm_call.duration_ms,
+                    "streaming": llm_call.streaming,
+                }
+                client.table("llm_calls").upsert(call_data).execute()
+                print(f"[agent-trace] Saved LLM call {llm_call.call_id}", file=sys.stderr)
+            except Exception as e:
+                print(f"[agent-trace] Error saving LLM call: {e}", file=sys.stderr)
 
         for tool_exec in trace.tool_executions:
             exec_data = {
@@ -453,48 +464,61 @@ class ThreadedSupabaseTraceStore(TraceStore):
             client.table("tool_executions").upsert(exec_data).execute()
 
         for stt_call in trace.stt_calls:
-            stt_data = {
-                "call_id": stt_call.call_id,
-                "trace_id": trace.trace_id,
-                "provider": stt_call.provider,
-                "model": stt_call.model,
-                "audio_duration_ms": stt_call.audio_duration_ms,
-                "audio_format": stt_call.audio_format,
-                "language": stt_call.language,
-                "transcript": stt_call.transcript,
-                "confidence": stt_call.confidence,
-                "started_at": stt_call.started_at.isoformat(),
-                "ended_at": stt_call.ended_at.isoformat() if stt_call.ended_at else None,
-                "duration_ms": stt_call.duration_ms,
-                "status": stt_call.status.value,
-                "error": stt_call.error,
-            }
-            client.table("stt_calls").upsert(stt_data).execute()
+            try:
+                stt_data = {
+                    "call_id": stt_call.call_id,
+                    "trace_id": trace.trace_id,
+                    "provider": stt_call.provider,
+                    "model": stt_call.model,
+                    "function_name": stt_call.function_name,
+                    "audio_duration_ms": stt_call.audio_duration_ms,
+                    "audio_format": stt_call.audio_format,
+                    "language": stt_call.language,
+                    "transcript": stt_call.transcript,
+                    "confidence": stt_call.confidence,
+                    "started_at": stt_call.started_at.isoformat(),
+                    "ended_at": stt_call.ended_at.isoformat() if stt_call.ended_at else None,
+                    "duration_ms": stt_call.duration_ms,
+                    "status": stt_call.status.value,
+                    "error": stt_call.error,
+                }
+                client.table("stt_calls").upsert(stt_data).execute()
+                print(f"[agent-trace] Saved STT call {stt_call.call_id}", file=sys.stderr)
+            except Exception as e:
+                print(f"[agent-trace] Error saving STT call: {e}", file=sys.stderr)
 
         for tts_call in trace.tts_calls:
-            tts_data = {
-                "call_id": tts_call.call_id,
-                "trace_id": trace.trace_id,
-                "provider": tts_call.provider,
-                "model": tts_call.model,
-                "voice": tts_call.voice,
-                "input_text": tts_call.input_text,
-                "input_chars": tts_call.input_chars,
-                "output_audio_duration_ms": tts_call.output_audio_duration_ms,
-                "output_format": tts_call.output_format,
-                "voice_settings": tts_call.voice_settings,
-                "started_at": tts_call.started_at.isoformat(),
-                "ended_at": tts_call.ended_at.isoformat() if tts_call.ended_at else None,
-                "duration_ms": tts_call.duration_ms,
-                "status": tts_call.status.value,
-                "error": tts_call.error,
-            }
-            client.table("tts_calls").upsert(tts_data).execute()
+            try:
+                tts_data = {
+                    "call_id": tts_call.call_id,
+                    "trace_id": trace.trace_id,
+                    "provider": tts_call.provider,
+                    "model": tts_call.model,
+                    "function_name": tts_call.function_name,
+                    "voice": tts_call.voice,
+                    "input_text": tts_call.input_text,
+                    "input_chars": tts_call.input_chars,
+                    "output_audio_duration_ms": tts_call.output_audio_duration_ms,
+                    "output_format": tts_call.output_format,
+                    "voice_settings": tts_call.voice_settings,
+                    "started_at": tts_call.started_at.isoformat(),
+                    "ended_at": tts_call.ended_at.isoformat() if tts_call.ended_at else None,
+                    "duration_ms": tts_call.duration_ms,
+                    "status": tts_call.status.value,
+                    "error": tts_call.error,
+                }
+                client.table("tts_calls").upsert(tts_data).execute()
+                print(f"[agent-trace] Saved TTS call {tts_call.call_id}", file=sys.stderr)
+            except Exception as e:
+                print(f"[agent-trace] Error saving TTS call: {e}", file=sys.stderr)
 
     def save(self, trace: Trace) -> None:
         """Queue trace for background saving (non-blocking)."""
+        import sys
+        print(f"[agent-trace] Queuing trace for save...", file=sys.stderr)
         self._ensure_started()
         self._queue.put(trace)
+        print(f"[agent-trace] Trace queued, queue size: {self._queue.qsize()}", file=sys.stderr)
 
     def get(self, trace_id: str) -> Optional[Trace]:
         """Fetch trace - delegates to synchronous store."""
@@ -509,11 +533,16 @@ class ThreadedSupabaseTraceStore(TraceStore):
 
     def _shutdown(self):
         """Gracefully shutdown the background thread."""
+        import sys
         if self._started:
+            print(f"[agent-trace] Shutting down, flushing queue...", file=sys.stderr)
+            # Wait for queue to be processed before stopping
+            self._queue.join()
             self._stop_event.set()
             self._queue.put(None)  # Poison pill
             if self._thread and self._thread.is_alive():
                 self._thread.join(timeout=5.0)
+            print(f"[agent-trace] Shutdown complete", file=sys.stderr)
 
     def flush(self):
         """Wait for all queued saves to complete."""

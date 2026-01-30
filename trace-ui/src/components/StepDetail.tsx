@@ -10,6 +10,80 @@ import {
   formatCost,
 } from "@/lib/pricing";
 
+/**
+ * Capitalize provider and model names appropriately
+ */
+function formatProviderName(name: string | null): string {
+  if (!name) return "Unknown";
+
+  // Known provider capitalizations
+  const providerMap: Record<string, string> = {
+    "openai": "OpenAI",
+    "anthropic": "Anthropic",
+    "google": "Google",
+    "deepgram": "Deepgram",
+    "elevenlabs": "ElevenLabs",
+    "assemblyai": "AssemblyAI",
+    "amazon": "Amazon",
+    "azure": "Azure",
+    "cohere": "Cohere",
+    "mistral": "Mistral",
+  };
+
+  // Known model capitalizations
+  const modelMap: Record<string, string> = {
+    "gpt-4o": "GPT-4o",
+    "gpt-4o-mini": "GPT-4o Mini",
+    "gpt-4-turbo": "GPT-4 Turbo",
+    "gpt-4": "GPT-4",
+    "gpt-3.5-turbo": "GPT-3.5 Turbo",
+    "claude-3-opus": "Claude 3 Opus",
+    "claude-3-sonnet": "Claude 3 Sonnet",
+    "claude-3-haiku": "Claude 3 Haiku",
+    "claude-3.5-sonnet": "Claude 3.5 Sonnet",
+    "claude-3.5-haiku": "Claude 3.5 Haiku",
+    "nova-2": "Nova-2",
+    "nova": "Nova",
+    "whisper-1": "Whisper",
+    "eleven_multilingual_v2": "Multilingual v2",
+    "eleven_monolingual_v1": "Monolingual v1",
+    "tts-1": "TTS-1",
+    "tts-1-hd": "TTS-1 HD",
+  };
+
+  const lower = name.toLowerCase();
+
+  // Check exact matches first
+  if (providerMap[lower]) return providerMap[lower];
+  if (modelMap[lower]) return modelMap[lower];
+
+  // Check if it contains a known name
+  for (const [key, value] of Object.entries(providerMap)) {
+    if (lower.includes(key)) {
+      return name.replace(new RegExp(key, 'i'), value);
+    }
+  }
+  for (const [key, value] of Object.entries(modelMap)) {
+    if (lower === key) {
+      return value;
+    }
+  }
+
+  // Default: capitalize first letter of each word
+  return name
+    .split(/[-_\s]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/**
+ * Capitalize status values properly (e.g., "success" -> "Success")
+ */
+function capitalizeStatus(status: string | null | undefined): string {
+  if (!status) return "Unknown";
+  return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+}
+
 interface StepDetailProps {
   node: TreeNode;
 }
@@ -242,7 +316,7 @@ function computeProviderMetrics(nodes: TreeNode[]): ProviderMetrics[] {
       const llm = node.data as LLMCall;
       const key = `llm:${llm.provider}/${llm.model}`;
       const existing = metricsMap.get(key) || {
-        provider: `${llm.provider}/${llm.model}`,
+        provider: `${formatProviderName(llm.provider)} / ${formatProviderName(llm.model)}`,
         type: "llm" as const,
         count: 0,
         totalLatency: 0,
@@ -264,7 +338,7 @@ function computeProviderMetrics(nodes: TreeNode[]): ProviderMetrics[] {
       const stt = node.data as STTCall;
       const key = `stt:${stt.provider}/${stt.model}`;
       const existing = metricsMap.get(key) || {
-        provider: `${stt.provider}/${stt.model}`,
+        provider: `${formatProviderName(stt.provider)} / ${formatProviderName(stt.model)}`,
         type: "stt" as const,
         count: 0,
         totalLatency: 0,
@@ -280,7 +354,7 @@ function computeProviderMetrics(nodes: TreeNode[]): ProviderMetrics[] {
       const tts = node.data as TTSCall;
       const key = `tts:${tts.provider}/${tts.model}`;
       const existing = metricsMap.get(key) || {
-        provider: `${tts.provider}/${tts.model}`,
+        provider: `${formatProviderName(tts.provider)} / ${formatProviderName(tts.model)}`,
         type: "tts" as const,
         count: 0,
         totalLatency: 0,
@@ -398,7 +472,7 @@ function ProviderMetricsTable({ metrics }: { metrics: ProviderMetrics[] }) {
             {llmMetrics.map((m, i) => (
               <div key={i} className="px-3 py-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                  <span className="text-[12px] font-medium text-[#374151]">{m.provider}</span>
                   <span className="text-[12px] text-[#6b7280]">{m.count}x</span>
                 </div>
                 <div className="flex gap-4 mt-1 text-[11px] text-[#6b7280]">
@@ -419,7 +493,7 @@ function ProviderMetricsTable({ metrics }: { metrics: ProviderMetrics[] }) {
           <div className="bg-[#f9fafb] rounded-lg divide-y divide-[#e5e7eb]">
             {sttMetrics.map((m, i) => (
               <div key={i} className="px-3 py-2 flex justify-between items-center">
-                <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                <span className="text-[12px] font-medium text-[#374151]">{m.provider}</span>
                 <div className="flex gap-4 text-[11px] text-[#6b7280]">
                   <span>{m.count}x</span>
                   <span>avg {Math.round(m.avgLatency)}ms</span>
@@ -438,7 +512,7 @@ function ProviderMetricsTable({ metrics }: { metrics: ProviderMetrics[] }) {
           <div className="bg-[#f9fafb] rounded-lg divide-y divide-[#e5e7eb]">
             {ttsMetrics.map((m, i) => (
               <div key={i} className="px-3 py-2 flex justify-between items-center">
-                <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                <span className="text-[12px] font-medium text-[#374151]">{m.provider}</span>
                 <div className="flex gap-4 text-[11px] text-[#6b7280]">
                   <span>{m.count}x</span>
                   <span>avg {Math.round(m.avgLatency)}ms</span>
@@ -557,20 +631,89 @@ function ConversationTurnView({ turn }: { turn: ConversationTurn }) {
   );
 }
 
+type ProviderType = "llm" | "stt" | "tts";
+
+function ProviderStatsDropdown({ metrics }: { metrics: ProviderMetrics[] }) {
+  const [selectedType, setSelectedType] = useState<ProviderType>("llm");
+
+  const llmMetrics = metrics.filter(m => m.type === "llm");
+  const sttMetrics = metrics.filter(m => m.type === "stt");
+  const ttsMetrics = metrics.filter(m => m.type === "tts");
+
+  // Get stats for the selected type
+  const getStatsForType = (type: ProviderType) => {
+    const typeMetrics = metrics.filter(m => m.type === type);
+    const totalCost = typeMetrics.reduce((sum, m) => sum + m.totalCost, 0);
+    const totalCalls = typeMetrics.reduce((sum, m) => sum + m.count, 0);
+    return { totalCost, totalCalls };
+  };
+
+  const stats = getStatsForType(selectedType);
+
+  // Build available options based on what data exists
+  const options: { value: ProviderType; label: string }[] = [];
+  if (llmMetrics.length > 0) options.push({ value: "llm", label: "LLM" });
+  if (sttMetrics.length > 0) options.push({ value: "stt", label: "STT" });
+  if (ttsMetrics.length > 0) options.push({ value: "tts", label: "TTS" });
+
+  // If no options or selected type has no data, show placeholder
+  if (options.length === 0) {
+    return (
+      <div className="text-[13px] text-[#6b7280]">No provider data available</div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Dropdown */}
+      <div className="flex items-center gap-2">
+        <span className="text-[13px] text-[#6b7280]">Provider</span>
+        <select
+          value={selectedType}
+          onChange={(e) => setSelectedType(e.target.value as ProviderType)}
+          className="px-3 py-1.5 text-[13px] border border-[#e5e7eb] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366f1] focus:border-transparent bg-white"
+        >
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Stats for selected type */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[#f9fafb] rounded-lg p-3">
+          <div className="text-[11px] text-[#6b7280] uppercase">Cost</div>
+          <div className="text-[15px] font-semibold text-[#1f2937]">{formatCost(stats.totalCost)}</div>
+        </div>
+        <div className="bg-[#f9fafb] rounded-lg p-3">
+          <div className="text-[11px] text-[#6b7280] uppercase"># of Calls</div>
+          <div className="text-[15px] font-semibold text-[#1f2937]">{stats.totalCalls}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AgentDetail({ node }: { node: TreeNode }) {
   const data = node.data as Trace;
   const allNodes = collectAllNodes(node);
   const providerMetrics = computeProviderMetrics(allNodes);
   const turns = extractConversationTurns(allNodes);
 
+  // Calculate total cost across all providers
+  const totalCost = providerMetrics.reduce((sum, m) => sum + m.totalCost, 0);
+
   return (
     <>
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6] mb-4">
           <MetricsRow label="Total Duration" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Status" value={data.status} />
+          <MetricsRow label="Total Cost" value={formatCost(totalCost)} />
+          <MetricsRow label="Status" value={capitalizeStatus(data.status)} />
         </div>
-        <ProviderMetricsTable metrics={providerMetrics} />
+        <ProviderStatsDropdown metrics={providerMetrics} />
       </CollapsibleSection>
 
       {turns.length > 0 && (
@@ -620,7 +763,7 @@ function LLMDetail({ data }: { data: LLMCall }) {
         <div className="divide-y divide-[#f3f4f6]">
           <MetricsRow label="Cost" value={formatCost(cost)} />
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Model" value={data.model || "—"} />
+          <MetricsRow label="Model" value={formatProviderName(data.model)} />
           <MetricsRow label="Input Tokens" value={data.prompt_tokens || 0} />
           <MetricsRow label="Output Tokens" value={data.completion_tokens || 0} />
           <MetricsRow label="Total Tokens" value={data.total_tokens || 0} />
@@ -656,7 +799,7 @@ function ToolDetail({ data }: { data: ToolExecution }) {
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Status" value={data.status} />
+          <MetricsRow label="Status" value={capitalizeStatus(data.status)} />
         </div>
       </CollapsibleSection>
 
@@ -685,10 +828,10 @@ function STTDetail({ data }: { data: STTCall }) {
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
           <MetricsRow label="Cost" value={formatCost(cost)} />
-          <MetricsRow label="Provider" value={data.provider} />
-          <MetricsRow label="Model" value={data.model} />
+          <MetricsRow label="Provider" value={formatProviderName(data.provider)} />
+          <MetricsRow label="Model" value={formatProviderName(data.model)} />
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Status" value={data.status} />
+          <MetricsRow label="Status" value={capitalizeStatus(data.status)} />
           {data.audio_duration_ms && (
             <MetricsRow label="Audio Duration" value={`${(data.audio_duration_ms / 1000).toFixed(2)}s`} />
           )}
@@ -721,11 +864,11 @@ function TTSDetail({ data }: { data: TTSCall }) {
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
           <MetricsRow label="Cost" value={formatCost(cost)} />
-          <MetricsRow label="Provider" value={data.provider} />
-          <MetricsRow label="Model" value={data.model || "—"} />
+          <MetricsRow label="Provider" value={formatProviderName(data.provider)} />
+          <MetricsRow label="Model" value={formatProviderName(data.model)} />
           {data.voice && <MetricsRow label="Voice" value={data.voice} />}
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Status" value={data.status} />
+          <MetricsRow label="Status" value={capitalizeStatus(data.status)} />
           <MetricsRow label="Input Characters" value={data.input_chars || 0} />
           {data.output_format && <MetricsRow label="Output Format" value={data.output_format} />}
           {data.output_audio_duration_ms && (

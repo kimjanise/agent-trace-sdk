@@ -109,7 +109,7 @@ function LLMContent({ data }: { data: LLMCall }) {
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
           <div>
             <div className="text-[10px] text-gray-400 uppercase">Model</div>
-            <div className="text-[12px] font-mono font-medium text-gray-900">{data.model}</div>
+            <div className="text-[12px] font-medium text-gray-900">{data.model}</div>
           </div>
         </div>
       </div>
@@ -185,7 +185,7 @@ function STTContent({ data }: { data: STTCall }) {
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
           <div>
             <div className="text-[10px] text-gray-400 uppercase">Model</div>
-            <div className="text-[12px] font-mono font-medium text-gray-900">{data.model}</div>
+            <div className="text-[12px] font-medium text-gray-900">{data.model}</div>
           </div>
         </div>
         {data.audio_duration_ms && (
@@ -226,7 +226,7 @@ function TTSContent({ data }: { data: TTSCall }) {
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
           <div>
             <div className="text-[10px] text-gray-400 uppercase">Voice</div>
-            <div className="text-[12px] font-mono font-medium text-gray-900">{data.voice || data.model || "—"}</div>
+            <div className="text-[12px] font-medium text-gray-900">{data.voice || data.model || "—"}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">

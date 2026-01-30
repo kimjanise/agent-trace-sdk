@@ -54,5 +54,5 @@ __all__ = [
 ]
 
 # Auto-configure from environment variables on import
-# Uses ThreadedSupabaseTraceStore to avoid httpx conflicts with other SDKs
+# Uses lazy initialization to avoid httpx conflicts with other SDKs (Deepgram, ElevenLabs)
 configure()

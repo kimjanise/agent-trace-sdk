@@ -67,7 +67,7 @@ function buildTree(
       const llmNode: TreeNode = {
         id: llm.call_id,
         type: "llm",
-        name: llm.model,
+        name: llm.function_name || llm.model,
         duration_ms: llm.duration_ms,
         tokens: llm.total_tokens,
         data: llm,
@@ -104,7 +104,7 @@ function buildTree(
       children.push({
         id: stt.call_id,
         type: "stt",
-        name: `${stt.provider}/${stt.model}`,
+        name: stt.function_name || stt.model,
         duration_ms: stt.duration_ms,
         status: stt.status,
         data: stt,
@@ -115,7 +115,7 @@ function buildTree(
       children.push({
         id: tts.call_id,
         type: "tts",
-        name: `${tts.provider}/${tts.model}`,
+        name: tts.function_name || tts.model,
         duration_ms: tts.duration_ms,
         status: tts.status,
         data: tts,
@@ -210,11 +210,13 @@ export default function TraceDetailPanel({
       setLoading(true);
       try {
         const [llmCallsData, toolExecutionsData, sttCallsData, ttsCallsData] = await Promise.all([
-          getLLMCalls(trace.trace_id),
-          getToolExecutions(trace.trace_id),
-          getSTTCalls(trace.trace_id).catch(() => []),
-          getTTSCalls(trace.trace_id).catch(() => []),
+          getLLMCalls(trace.trace_id).catch((e) => { console.error("Error fetching LLM calls:", e); return []; }),
+          getToolExecutions(trace.trace_id).catch((e) => { console.error("Error fetching tool executions:", e); return []; }),
+          getSTTCalls(trace.trace_id).catch((e) => { console.error("Error fetching STT calls:", e); return []; }),
+          getTTSCalls(trace.trace_id).catch((e) => { console.error("Error fetching TTS calls:", e); return []; }),
         ]);
+
+        console.log("Loaded trace data:", { llmCallsData, toolExecutionsData, sttCallsData, ttsCallsData });
 
         setLlmCalls(llmCallsData);
         setToolExecutions(toolExecutionsData);
@@ -419,7 +421,7 @@ export default function TraceDetailPanel({
           ) : filteredTree ? (
             <>
               {/* Left Sidebar - Tree View */}
-              <div className="w-[320px] border-r border-[#e5e7eb] flex flex-col bg-white">
+              <div className="w-[380px] border-r border-[#e5e7eb] flex flex-col bg-white">
                 <div className="px-4 py-2 border-b border-[#e5e7eb]">
                   <span className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
                     Trace

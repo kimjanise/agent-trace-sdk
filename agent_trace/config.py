@@ -17,14 +17,31 @@ class _Config:
 
     def __init__(self):
         self._store: Optional["TraceStore"] = None
+        self._lazy_init_done = False
+
+    def _lazy_init(self) -> None:
+        """Lazily initialize Supabase store on first access."""
+        if self._lazy_init_done:
+            return
+        self._lazy_init_done = True
+
+        # Only auto-configure if no store is set
+        if self._store is None:
+            url = os.environ.get("SUPABASE_URL")
+            key = os.environ.get("SUPABASE_KEY")
+            if url and key:
+                from .storage import ThreadedSupabaseTraceStore
+                self._store = ThreadedSupabaseTraceStore(url=url, key=key)
 
     @property
     def store(self) -> Optional["TraceStore"]:
+        self._lazy_init()
         return self._store
 
     @store.setter
     def store(self, value: Optional["TraceStore"]) -> None:
         self._store = value
+        self._lazy_init_done = True  # Mark as done if explicitly set
 
 
 _config = _Config()
@@ -60,13 +77,14 @@ def configure(
         _config.store = store
         return
 
-    # Try to auto-configure Supabase from args or env vars
-    url = supabase_url or os.environ.get("SUPABASE_URL")
-    key = supabase_key or os.environ.get("SUPABASE_KEY")
-
-    if url and key:
-        from .storage import ThreadedSupabaseTraceStore
-        _config.store = ThreadedSupabaseTraceStore(url=url, key=key)
+    # Only create store immediately if credentials are explicitly passed
+    # Otherwise, let lazy init handle it (avoids httpx conflicts at import time)
+    if supabase_url or supabase_key:
+        url = supabase_url or os.environ.get("SUPABASE_URL")
+        key = supabase_key or os.environ.get("SUPABASE_KEY")
+        if url and key:
+            from .storage import ThreadedSupabaseTraceStore
+            _config.store = ThreadedSupabaseTraceStore(url=url, key=key)
 
 
 def get_config() -> _Config:

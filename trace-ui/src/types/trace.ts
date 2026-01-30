@@ -20,6 +20,7 @@ export interface LLMCall {
   trace_id: string;
   provider: string;
   model: string;
+  function_name: string | null;
   request_messages: Array<{ role: string; content: string }>;
   request_tools: unknown[];
   request_system_prompt: string | null;
@@ -60,6 +61,7 @@ export interface STTCall {
   trace_id: string;
   provider: string;
   model: string;
+  function_name: string | null;
   audio_duration_ms: number | null;
   audio_format: string | null;
   language: string | null;
@@ -77,6 +79,7 @@ export interface TTSCall {
   trace_id: string;
   provider: string;
   model: string;
+  function_name: string | null;
   voice: string | null;
   input_text: string | null;
   input_chars: number | null;

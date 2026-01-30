@@ -14,21 +14,21 @@ def now() -> datetime:
 
 
 class ToolExecutionStatus(Enum):
-    SUCCESS = "SUCCESS"
-    ERROR = "ERROR"
-    PENDING = "PENDING"
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
 
 
 class STTStatus(Enum):
-    SUCCESS = "SUCCESS"
-    ERROR = "ERROR"
-    PENDING = "PENDING"
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
 
 
 class TTSStatus(Enum):
-    SUCCESS = "SUCCESS"
-    ERROR = "ERROR"
-    PENDING = "PENDING"
+    SUCCESS = "success"
+    ERROR = "error"
+    PENDING = "pending"
 
 
 @dataclass
@@ -84,6 +84,7 @@ class STTCall:
     call_id: str = field(default_factory=generate_id)
     provider: str = "unknown"
     model: str = "unknown"
+    function_name: Optional[str] = None
 
     audio_duration_ms: Optional[int] = None
     audio_format: Optional[str] = None
@@ -119,6 +120,7 @@ class TTSCall:
     call_id: str = field(default_factory=generate_id)
     provider: str = "unknown"
     model: str = "unknown"
+    function_name: Optional[str] = None
     voice: Optional[str] = None
 
     input_text: str = ""
@@ -160,7 +162,8 @@ class LLMCall:
     call_id: str = field(default_factory=generate_id)
     provider: str = "unknown"
     model: str = "unknown"
-    
+    function_name: Optional[str] = None
+
     request_messages: list = field(default_factory=list)
     request_tools: list = field(default_factory=list)
     request_system_prompt: Optional[str] = None

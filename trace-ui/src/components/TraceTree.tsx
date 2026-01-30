@@ -1,6 +1,6 @@
 "use client";
 
-import { TreeNode } from "@/types/trace";
+import { TreeNode, LLMCall, STTCall, TTSCall } from "@/types/trace";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -60,12 +60,6 @@ function getIcon(type: string, hasError: boolean = false) {
 function formatDuration(ms: number | null) {
   if (ms === null) return "";
   return `${ms} ms`;
-}
-
-function formatCost(tokens: number | undefined) {
-  if (!tokens) return "";
-  const cost = tokens * 0.000002;
-  return `$${cost.toFixed(4)}`;
 }
 
 interface TreeNodeItemProps {
@@ -136,10 +130,16 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className={`text-[14px] font-medium truncate ${hasError ? "text-[#dc2626]" : "text-[#1f2937]"}`}>
-              {node.type === "agent" ? "Session" : node.type === "llm" ? "llm" : node.type === "stt" ? "stt" : node.type === "tts" ? "tts" : node.name}
+              {node.type === "agent" ? "Session" : node.type === "tool" ? node.name : node.name}
             </span>
-            {(node.type === "llm" || node.type === "stt" || node.type === "tts") && (
-              <span className="text-[13px] text-[#6b7280]">{node.name}</span>
+            {node.type === "llm" && (
+              <span className="text-[13px] text-[#6b7280]">{(node.data as LLMCall).model}</span>
+            )}
+            {node.type === "stt" && (
+              <span className="text-[13px] text-[#6b7280]">{(node.data as STTCall).model}</span>
+            )}
+            {node.type === "tts" && (
+              <span className="text-[13px] text-[#6b7280]">{(node.data as TTSCall).model}</span>
             )}
             {hasError && (
               <span className="text-[11px] font-medium text-[#dc2626] bg-[#fee2e2] px-1.5 py-0.5 rounded">
@@ -153,13 +153,6 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
         {node.duration_ms !== null && (
           <span className="text-[12px] text-[#6b7280] bg-[#f3f4f6] px-2 py-1 rounded flex-shrink-0">
             {formatDuration(node.duration_ms)}
-          </span>
-        )}
-
-        {/* Cost badge (only for nodes with tokens) */}
-        {node.tokens != null && node.tokens > 0 && (
-          <span className="text-[12px] text-[#6b7280] bg-[#f3f4f6] px-2 py-1 rounded flex-shrink-0">
-            {formatCost(node.tokens)}
           </span>
         )}
       </div>

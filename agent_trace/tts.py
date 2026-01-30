@@ -62,6 +62,7 @@ class TTSWrapper:
         tts_call = TTSCall(
             provider=self._provider,
             model=self._model,
+            function_name=self._func.__name__,
             voice=self._voice,
             input_text=input_text,
             input_chars=len(input_text),
@@ -82,6 +83,7 @@ class TTSWrapper:
         tts_call = TTSCall(
             provider=self._provider,
             model=self._model,
+            function_name=self._func.__name__,
             voice=self._voice,
             input_text=input_text,
             input_chars=len(input_text),

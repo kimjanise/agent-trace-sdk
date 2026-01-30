@@ -13,19 +13,19 @@ function getStatusBadge(status: string) {
   switch (status) {
     case "completed":
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[13px] font-medium rounded-md bg-[#d1fae5] text-[#065f46]">
+        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#d1fae5] text-[#065f46]">
           COMPLETED
         </span>
       );
     case "error":
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[13px] font-medium rounded-md bg-[#fee2e2] text-[#dc2626]">
-          FAILED
+        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#fee2e2] text-[#dc2626]">
+          ERROR
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[13px] font-medium rounded-md bg-[#fef3c7] text-[#d97706]">
+        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#fef3c7] text-[#d97706]">
           {status.toUpperCase()}
         </span>
       );
@@ -65,7 +65,7 @@ export default function TraceTable({
               Status
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Latency
+              Total Duration
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
               Tokens

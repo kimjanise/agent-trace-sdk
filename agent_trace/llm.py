@@ -110,6 +110,7 @@ class LLMWrapper:
         llm_call = LLMCall(
             provider=self._provider,
             model=self._model,
+            function_name=self._func.__name__,
             request_messages=self._extract_messages(args, kwargs),
         )
         with LLMCallContext(llm_call):
@@ -137,6 +138,7 @@ class LLMWrapper:
         llm_call = LLMCall(
             provider=self._provider,
             model=self._model,
+            function_name=self._func.__name__,
             request_messages=self._extract_messages(args, kwargs),
         )
         with LLMCallContext(llm_call):

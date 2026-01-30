@@ -74,8 +74,11 @@ class AgentWrapper:
     def _auto_save(self, trace: Trace) -> None:
         """Auto-save trace if a store is configured."""
         config = get_config()
+        print(f"[agent-trace] Auto-save trace_id={trace.trace_id}: {len(trace.llm_calls)} LLM calls, {len(trace.stt_calls)} STT calls, {len(trace.tts_calls)} TTS calls, {len(trace.tool_executions)} tool executions")
         if config.store is not None:
             config.store.save(trace)
+        else:
+            print("[agent-trace] No store configured, trace not saved")
 
 
 def agent(func: Callable = None, *, name: str = None) -> Union[AgentWrapper, Callable]:
