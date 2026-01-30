@@ -178,7 +178,22 @@ async def parallel_research_agent(query: str) -> str:
         if not message.tool_calls:
             return message.content
 
-        messages.append(message)
+        # Convert message to dict for serialization
+        messages.append({
+            "role": "assistant",
+            "content": message.content,
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in message.tool_calls
+            ]
+        })
 
         async def execute_tool(tool_call):
             function_name = tool_call.function.name
@@ -236,7 +251,22 @@ async def sequential_research_agent(query: str) -> str:
         if not message.tool_calls:
             return message.content
 
-        messages.append(message)
+        # Convert message to dict for serialization
+        messages.append({
+            "role": "assistant",
+            "content": message.content,
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in message.tool_calls
+            ]
+        })
 
         for tool_call in message.tool_calls:
             function_name = tool_call.function.name

@@ -1,3 +1,3 @@
 export * from "./errorTrail";
-export * from "./convertTreeToGraph";
-export * from "./layoutGraph";
+export * from "./convertToStateGraph";
+export * from "./layoutStateGraph";

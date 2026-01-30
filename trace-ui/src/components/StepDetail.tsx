@@ -3,6 +3,12 @@
 import { TreeNode, Trace, LLMCall, ToolExecution, STTCall, TTSCall } from "@/types/trace";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
+import {
+  calculateLLMCost,
+  calculateSTTCost,
+  calculateTTSCost,
+  formatCost,
+} from "@/lib/pricing";
 
 interface StepDetailProps {
   node: TreeNode;
@@ -39,36 +45,71 @@ function CollapsibleSection({ title, icon, defaultOpen = true, children }: Colla
 
 type ViewMode = "json" | "text";
 
-function DataViewer({ data, defaultMode = "json" }: { data: unknown; defaultMode?: ViewMode }) {
+interface DataViewerProps {
+  data: unknown;
+  defaultMode?: ViewMode;
+  label?: string;
+}
+
+function DataViewer({ data, defaultMode = "json", label }: DataViewerProps) {
   const [mode, setMode] = useState<ViewMode>(defaultMode);
+
+  // Handle null/undefined
+  if (data === null || data === undefined) {
+    return (
+      <div className="code-block text-[14px] text-[#9ca3af]">
+        (no data)
+      </div>
+    );
+  }
 
   const jsonString = JSON.stringify(data, null, 2);
 
   // Extract text content for text mode
   const textContent = (() => {
     if (typeof data === "string") return data;
-    if (data === null || data === undefined) return "";
+    if (typeof data === "number" || typeof data === "boolean") return String(data);
     if (typeof data === "object") {
-      // Handle common patterns like { content: "..." }
       const obj = data as Record<string, unknown>;
+
+      // Handle common patterns
       if ("content" in obj && typeof obj.content === "string") {
         return obj.content;
       }
-      if ("result" in obj && typeof obj.result === "string") {
-        return obj.result;
+      if ("text" in obj && typeof obj.text === "string") {
+        return obj.text;
       }
+      if ("transcript" in obj && typeof obj.transcript === "string") {
+        return obj.transcript;
+      }
+      if ("result" in obj) {
+        if (typeof obj.result === "string") return obj.result;
+        return JSON.stringify(obj.result, null, 2);
+      }
+      if ("message" in obj && typeof obj.message === "string") {
+        return obj.message;
+      }
+
       // For arrays of messages, extract content
       if (Array.isArray(data)) {
         return data
           .map((item) => {
+            if (typeof item === "string") return item;
             if (typeof item === "object" && item && "content" in item) {
               const role = "role" in item ? `[${item.role}] ` : "";
               return `${role}${item.content}`;
             }
-            return JSON.stringify(item);
+            return JSON.stringify(item, null, 2);
           })
           .join("\n\n");
       }
+
+      // Fallback: try to extract any string value
+      const stringValues = Object.values(obj).filter(v => typeof v === "string");
+      if (stringValues.length === 1) {
+        return stringValues[0] as string;
+      }
+
       return JSON.stringify(data, null, 2);
     }
     return String(data);
@@ -77,21 +118,24 @@ function DataViewer({ data, defaultMode = "json" }: { data: unknown; defaultMode
   // Simple syntax highlighting for JSON
   const highlighted = jsonString
     .replace(/"([^"]+)":/g, '<span class="json-key">"$1"</span>:')
-    .replace(/: "([^"]*)"([,\n])/g, ': <span class="json-string">"$1"</span>$2')
-    .replace(/: (\d+)([,\n])/g, ': <span class="json-number">$1</span>$2')
-    .replace(/: (true|false)([,\n])/g, ': <span class="json-boolean">$1</span>$2')
-    .replace(/: (null)([,\n])/g, ': <span class="json-null">$1</span>$2');
+    .replace(/: "([^"]*)"([,\n\}])/g, ': <span class="json-string">"$1"</span>$2')
+    .replace(/: (\d+\.?\d*)([,\n\}])/g, ': <span class="json-number">$1</span>$2')
+    .replace(/: (true|false)([,\n\}])/g, ': <span class="json-boolean">$1</span>$2')
+    .replace(/: (null)([,\n\}])/g, ': <span class="json-null">$1</span>$2');
 
   return (
     <div>
-      <select
-        className="galileo-select text-[12px] mb-3"
-        value={mode}
-        onChange={(e) => setMode(e.target.value as ViewMode)}
-      >
-        <option value="json">JSON</option>
-        <option value="text">Text</option>
-      </select>
+      <div className="flex items-center gap-3 mb-3">
+        {label && <span className="text-[12px] text-[#6b7280] uppercase tracking-wide">{label}</span>}
+        <select
+          className="galileo-select text-[12px]"
+          value={mode}
+          onChange={(e) => setMode(e.target.value as ViewMode)}
+        >
+          <option value="json">JSON</option>
+          <option value="text">Text</option>
+        </select>
+      </div>
       {mode === "json" ? (
         <pre
           className="code-block text-[13px] text-[#1f2937]"
@@ -162,26 +206,394 @@ function MetricsRow({ label, value }: { label: string; value: string | number })
   );
 }
 
-function AgentDetail({ data }: { data: Trace }) {
-  const cost = ((data.total_tokens || 0) * 0.000002).toFixed(4);
+interface ProviderMetrics {
+  provider: string;
+  type: "llm" | "stt" | "tts";
+  count: number;
+  totalLatency: number;
+  avgLatency: number;
+  totalTokens?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  totalCost: number;
+}
+
+interface ConversationTurn {
+  index: number;
+  userInput?: { type: "stt"; data: STTCall } | { type: "text"; content: string };
+  llmCalls: LLMCall[];
+  toolCalls: ToolExecution[];
+  systemOutput?: { type: "tts"; data: TTSCall } | { type: "text"; content: string };
+}
+
+function collectAllNodes(node: TreeNode): TreeNode[] {
+  const result: TreeNode[] = [node];
+  for (const child of node.children) {
+    result.push(...collectAllNodes(child));
+  }
+  return result;
+}
+
+function computeProviderMetrics(nodes: TreeNode[]): ProviderMetrics[] {
+  const metricsMap = new Map<string, ProviderMetrics>();
+
+  for (const node of nodes) {
+    if (node.type === "llm") {
+      const llm = node.data as LLMCall;
+      const key = `llm:${llm.provider}/${llm.model}`;
+      const existing = metricsMap.get(key) || {
+        provider: `${llm.provider}/${llm.model}`,
+        type: "llm" as const,
+        count: 0,
+        totalLatency: 0,
+        avgLatency: 0,
+        totalTokens: 0,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalCost: 0,
+      };
+      existing.count++;
+      existing.totalLatency += llm.duration_ms || 0;
+      existing.totalTokens = (existing.totalTokens || 0) + (llm.total_tokens || 0);
+      existing.inputTokens = (existing.inputTokens || 0) + (llm.prompt_tokens || 0);
+      existing.outputTokens = (existing.outputTokens || 0) + (llm.completion_tokens || 0);
+      existing.totalCost += calculateLLMCost(llm.provider, llm.model, llm.prompt_tokens || 0, llm.completion_tokens || 0);
+      existing.avgLatency = existing.totalLatency / existing.count;
+      metricsMap.set(key, existing);
+    } else if (node.type === "stt") {
+      const stt = node.data as STTCall;
+      const key = `stt:${stt.provider}/${stt.model}`;
+      const existing = metricsMap.get(key) || {
+        provider: `${stt.provider}/${stt.model}`,
+        type: "stt" as const,
+        count: 0,
+        totalLatency: 0,
+        avgLatency: 0,
+        totalCost: 0,
+      };
+      existing.count++;
+      existing.totalLatency += stt.duration_ms || 0;
+      existing.totalCost += calculateSTTCost(stt.provider, stt.model, stt.audio_duration_ms);
+      existing.avgLatency = existing.totalLatency / existing.count;
+      metricsMap.set(key, existing);
+    } else if (node.type === "tts") {
+      const tts = node.data as TTSCall;
+      const key = `tts:${tts.provider}/${tts.model}`;
+      const existing = metricsMap.get(key) || {
+        provider: `${tts.provider}/${tts.model}`,
+        type: "tts" as const,
+        count: 0,
+        totalLatency: 0,
+        avgLatency: 0,
+        totalCost: 0,
+      };
+      existing.count++;
+      existing.totalLatency += tts.duration_ms || 0;
+      existing.totalCost += calculateTTSCost(tts.provider, tts.model, tts.input_chars);
+      existing.avgLatency = existing.totalLatency / existing.count;
+      metricsMap.set(key, existing);
+    }
+  }
+
+  return Array.from(metricsMap.values());
+}
+
+function extractConversationTurns(nodes: TreeNode[]): ConversationTurn[] {
+  // Get all nodes sorted by start time
+  const timelineNodes = nodes
+    .filter(n => n.type !== "agent")
+    .map(n => ({
+      node: n,
+      startTime: new Date(
+        (n.data as LLMCall | STTCall | TTSCall | ToolExecution).started_at
+      ).getTime(),
+    }))
+    .sort((a, b) => a.startTime - b.startTime);
+
+  const turns: ConversationTurn[] = [];
+  let currentTurn: ConversationTurn | null = null;
+
+  for (const { node } of timelineNodes) {
+    if (node.type === "stt") {
+      // STT marks the start of a new turn
+      if (currentTurn) {
+        turns.push(currentTurn);
+      }
+      currentTurn = {
+        index: turns.length + 1,
+        userInput: { type: "stt", data: node.data as STTCall },
+        llmCalls: [],
+        toolCalls: [],
+      };
+    } else if (node.type === "llm") {
+      if (!currentTurn) {
+        // LLM without preceding STT (text-based input)
+        currentTurn = {
+          index: turns.length + 1,
+          llmCalls: [],
+          toolCalls: [],
+        };
+      }
+      currentTurn.llmCalls.push(node.data as LLMCall);
+      // Also collect tools from children
+      for (const child of node.children) {
+        if (child.type === "tool") {
+          currentTurn.toolCalls.push(child.data as ToolExecution);
+        }
+      }
+    } else if (node.type === "tool" && currentTurn) {
+      // Standalone tool (not under LLM)
+      currentTurn.toolCalls.push(node.data as ToolExecution);
+    } else if (node.type === "tts") {
+      if (currentTurn) {
+        currentTurn.systemOutput = { type: "tts", data: node.data as TTSCall };
+        turns.push(currentTurn);
+        currentTurn = null;
+      }
+    }
+  }
+
+  // Push any remaining turn
+  if (currentTurn && (currentTurn.llmCalls.length > 0 || currentTurn.userInput)) {
+    turns.push(currentTurn);
+  }
+
+  return turns;
+}
+
+function ProviderMetricsTable({ metrics }: { metrics: ProviderMetrics[] }) {
+  const llmMetrics = metrics.filter(m => m.type === "llm");
+  const sttMetrics = metrics.filter(m => m.type === "stt");
+  const ttsMetrics = metrics.filter(m => m.type === "tts");
+
+  const totalCost = metrics.reduce((sum, m) => sum + m.totalCost, 0);
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="bg-[#f9fafb] rounded-lg p-3">
+          <div className="text-[11px] text-[#6b7280] uppercase">Total Cost</div>
+          <div className="text-[15px] font-semibold text-[#1f2937]">{formatCost(totalCost)}</div>
+        </div>
+        <div className="bg-[#f9fafb] rounded-lg p-3">
+          <div className="text-[11px] text-[#6b7280] uppercase">LLM Calls</div>
+          <div className="text-[15px] font-semibold text-[#1f2937]">
+            {llmMetrics.reduce((sum, m) => sum + m.count, 0)}
+          </div>
+        </div>
+        <div className="bg-[#f9fafb] rounded-lg p-3">
+          <div className="text-[11px] text-[#6b7280] uppercase">Total Tokens</div>
+          <div className="text-[15px] font-semibold text-[#1f2937]">
+            {llmMetrics.reduce((sum, m) => sum + (m.totalTokens || 0), 0).toLocaleString()}
+          </div>
+        </div>
+      </div>
+
+      {/* LLM breakdown */}
+      {llmMetrics.length > 0 && (
+        <div>
+          <div className="text-[12px] font-medium text-[#6b7280] mb-2">LLM Usage</div>
+          <div className="bg-[#f9fafb] rounded-lg divide-y divide-[#e5e7eb]">
+            {llmMetrics.map((m, i) => (
+              <div key={i} className="px-3 py-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                  <span className="text-[12px] text-[#6b7280]">{m.count}x</span>
+                </div>
+                <div className="flex gap-4 mt-1 text-[11px] text-[#6b7280]">
+                  <span>{m.inputTokens?.toLocaleString()} in / {m.outputTokens?.toLocaleString()} out</span>
+                  <span>avg {Math.round(m.avgLatency)}ms</span>
+                  <span>{formatCost(m.totalCost)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* STT breakdown */}
+      {sttMetrics.length > 0 && (
+        <div>
+          <div className="text-[12px] font-medium text-[#6b7280] mb-2">Speech-to-Text</div>
+          <div className="bg-[#f9fafb] rounded-lg divide-y divide-[#e5e7eb]">
+            {sttMetrics.map((m, i) => (
+              <div key={i} className="px-3 py-2 flex justify-between items-center">
+                <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                <div className="flex gap-4 text-[11px] text-[#6b7280]">
+                  <span>{m.count}x</span>
+                  <span>avg {Math.round(m.avgLatency)}ms</span>
+                  <span>{formatCost(m.totalCost)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TTS breakdown */}
+      {ttsMetrics.length > 0 && (
+        <div>
+          <div className="text-[12px] font-medium text-[#6b7280] mb-2">Text-to-Speech</div>
+          <div className="bg-[#f9fafb] rounded-lg divide-y divide-[#e5e7eb]">
+            {ttsMetrics.map((m, i) => (
+              <div key={i} className="px-3 py-2 flex justify-between items-center">
+                <span className="text-[12px] font-mono text-[#374151]">{m.provider}</span>
+                <div className="flex gap-4 text-[11px] text-[#6b7280]">
+                  <span>{m.count}x</span>
+                  <span>avg {Math.round(m.avgLatency)}ms</span>
+                  <span>{formatCost(m.totalCost)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConversationTurnView({ turn }: { turn: ConversationTurn }) {
+  const [expanded, setExpanded] = useState(false);
+
+  // Extract user message
+  let userMessage = "";
+  if (turn.userInput?.type === "stt") {
+    userMessage = turn.userInput.data.transcript || "(no transcript)";
+  } else if (turn.userInput?.type === "text") {
+    userMessage = turn.userInput.content;
+  } else if (turn.llmCalls.length > 0) {
+    // Try to get user message from first LLM call
+    const firstLLM = turn.llmCalls[0];
+    const userMsg = firstLLM.request_messages?.find(m => m.role === "user");
+    userMessage = userMsg?.content || "(no input)";
+  }
+
+  // Extract assistant response
+  let assistantMessage = "";
+  if (turn.systemOutput?.type === "tts") {
+    assistantMessage = turn.systemOutput.data.input_text || "(no output)";
+  } else if (turn.systemOutput?.type === "text") {
+    assistantMessage = turn.systemOutput.content;
+  } else if (turn.llmCalls.length > 0) {
+    // Get response from last LLM call
+    const lastLLM = turn.llmCalls[turn.llmCalls.length - 1];
+    assistantMessage = lastLLM.response_content || "(no response)";
+  }
+
+  const totalLatency = turn.llmCalls.reduce((sum, llm) => sum + (llm.duration_ms || 0), 0);
+  const totalTokens = turn.llmCalls.reduce((sum, llm) => sum + (llm.total_tokens || 0), 0);
+
+  return (
+    <div className="border border-[#e5e7eb] rounded-lg overflow-hidden">
+      {/* Turn header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-3 py-2 bg-[#f9fafb] flex items-center justify-between hover:bg-[#f3f4f6] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          {expanded ? (
+            <ChevronDown className="w-4 h-4 text-[#9ca3af]" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-[#9ca3af]" />
+          )}
+          <span className="text-[12px] font-medium text-[#374151]">Turn {turn.index}</span>
+          {turn.toolCalls.length > 0 && (
+            <span className="text-[10px] px-1.5 py-0.5 bg-[#e5e7eb] rounded text-[#6b7280]">
+              {turn.toolCalls.length} tool{turn.toolCalls.length > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+        <div className="flex gap-3 text-[11px] text-[#6b7280]">
+          <span>{totalTokens} tokens</span>
+          <span>{totalLatency}ms</span>
+        </div>
+      </button>
+
+      {/* Turn content */}
+      <div className="px-3 py-2 space-y-2">
+        {/* User message */}
+        <div>
+          <div className="text-[10px] font-medium text-[#9ca3af] uppercase mb-1">User</div>
+          <div className="text-[13px] text-[#374151] bg-[#eef2ff] rounded-lg px-3 py-2">
+            {userMessage.length > 200 && !expanded
+              ? userMessage.slice(0, 200) + "..."
+              : userMessage}
+          </div>
+        </div>
+
+        {/* Tools used (if expanded) */}
+        {expanded && turn.toolCalls.length > 0 && (
+          <div>
+            <div className="text-[10px] font-medium text-[#9ca3af] uppercase mb-1">Tools</div>
+            <div className="space-y-1">
+              {turn.toolCalls.map((tool, i) => (
+                <div
+                  key={i}
+                  className={`text-[12px] font-mono px-2 py-1 rounded ${
+                    tool.status === "error"
+                      ? "bg-[#fef2f2] text-[#dc2626]"
+                      : "bg-[#f0fdf4] text-[#166534]"
+                  }`}
+                >
+                  {tool.tool_name}({Object.keys(tool.arguments || {}).join(", ")})
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Assistant message */}
+        <div>
+          <div className="text-[10px] font-medium text-[#9ca3af] uppercase mb-1">Assistant</div>
+          <div className="text-[13px] text-[#374151] bg-[#f9fafb] rounded-lg px-3 py-2">
+            {assistantMessage.length > 200 && !expanded
+              ? assistantMessage.slice(0, 200) + "..."
+              : assistantMessage}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentDetail({ node }: { node: TreeNode }) {
+  const data = node.data as Trace;
+  const allNodes = collectAllNodes(node);
+  const providerMetrics = computeProviderMetrics(allNodes);
+  const turns = extractConversationTurns(allNodes);
 
   return (
     <>
       <CollapsibleSection title="Metrics">
-        <div className="divide-y divide-[#f3f4f6]">
-          <MetricsRow label="Cost" value={`$${cost}`} />
-          <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
-          <MetricsRow label="Total Tokens" value={data.total_tokens || 0} />
+        <div className="divide-y divide-[#f3f4f6] mb-4">
+          <MetricsRow label="Total Duration" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
+          <MetricsRow label="Status" value={data.status} />
         </div>
+        <ProviderMetricsTable metrics={providerMetrics} />
       </CollapsibleSection>
 
-      <CollapsibleSection title="Input">
-        <DataViewer data={{ content: data.input }} />
-      </CollapsibleSection>
+      {turns.length > 0 && (
+        <CollapsibleSection title={`Conversation (${turns.length} turn${turns.length > 1 ? "s" : ""})`}>
+          <div className="space-y-3">
+            {turns.map((turn, i) => (
+              <ConversationTurnView key={i} turn={turn} />
+            ))}
+          </div>
+        </CollapsibleSection>
+      )}
 
-      <CollapsibleSection title="Output">
-        <DataViewer data={{ content: data.output }} />
-      </CollapsibleSection>
+      {turns.length === 0 && (
+        <>
+          <CollapsibleSection title="Input">
+            <DataViewer data={data.input} defaultMode="text" />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Output">
+            <DataViewer data={data.output} defaultMode="text" />
+          </CollapsibleSection>
+        </>
+      )}
 
       {data.error && (
         <CollapsibleSection title="Error">
@@ -195,14 +607,20 @@ function AgentDetail({ data }: { data: Trace }) {
 }
 
 function LLMDetail({ data }: { data: LLMCall }) {
-  const cost = ((data.total_tokens || 0) * 0.000002).toFixed(4);
+  const cost = calculateLLMCost(
+    data.provider,
+    data.model,
+    data.prompt_tokens || 0,
+    data.completion_tokens || 0
+  );
 
   return (
     <>
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
-          <MetricsRow label="Cost" value={`$${cost}`} />
+          <MetricsRow label="Cost" value={formatCost(cost)} />
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
+          <MetricsRow label="Model" value={data.model || "—"} />
           <MetricsRow label="Input Tokens" value={data.prompt_tokens || 0} />
           <MetricsRow label="Output Tokens" value={data.completion_tokens || 0} />
           <MetricsRow label="Total Tokens" value={data.total_tokens || 0} />
@@ -210,18 +628,24 @@ function LLMDetail({ data }: { data: LLMCall }) {
       </CollapsibleSection>
 
       <CollapsibleSection title="Input">
-        <DataViewer data={data.request_messages || []} />
+        <DataViewer data={data.request_messages || []} defaultMode="text" />
       </CollapsibleSection>
 
       <CollapsibleSection title="Output">
         {data.response_content ? (
-          <DataViewer data={{ content: data.response_content }} defaultMode="text" />
+          <DataViewer data={data.response_content} defaultMode="text" />
         ) : data.response_tool_calls && data.response_tool_calls.length > 0 ? (
-          <DataViewer data={data.response_tool_calls} />
+          <DataViewer data={data.response_tool_calls} defaultMode="json" />
         ) : (
-          <div className="text-[14px] text-[#6b7280]">No output</div>
+          <DataViewer data={null} />
         )}
       </CollapsibleSection>
+
+      {data.response_tool_calls && data.response_tool_calls.length > 0 && data.response_content && (
+        <CollapsibleSection title="Tool Calls">
+          <DataViewer data={data.response_tool_calls} defaultMode="json" />
+        </CollapsibleSection>
+      )}
     </>
   );
 }
@@ -237,7 +661,7 @@ function ToolDetail({ data }: { data: ToolExecution }) {
       </CollapsibleSection>
 
       <CollapsibleSection title="Input">
-        <DataViewer data={data.arguments || {}} />
+        <DataViewer data={data.arguments || {}} defaultMode="json" />
       </CollapsibleSection>
 
       <CollapsibleSection title="Output">
@@ -246,7 +670,7 @@ function ToolDetail({ data }: { data: ToolExecution }) {
             {data.error}
           </div>
         ) : (
-          <DataViewer data={{ result: data.result }} />
+          <DataViewer data={data.result} defaultMode="text" />
         )}
       </CollapsibleSection>
     </>
@@ -254,20 +678,23 @@ function ToolDetail({ data }: { data: ToolExecution }) {
 }
 
 function STTDetail({ data }: { data: STTCall }) {
+  const cost = calculateSTTCost(data.provider, data.model, data.audio_duration_ms);
+
   return (
     <>
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
+          <MetricsRow label="Cost" value={formatCost(cost)} />
           <MetricsRow label="Provider" value={data.provider} />
           <MetricsRow label="Model" value={data.model} />
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
           <MetricsRow label="Status" value={data.status} />
           {data.audio_duration_ms && (
-            <MetricsRow label="Audio Duration" value={`${data.audio_duration_ms} ms`} />
+            <MetricsRow label="Audio Duration" value={`${(data.audio_duration_ms / 1000).toFixed(2)}s`} />
           )}
           {data.audio_format && <MetricsRow label="Audio Format" value={data.audio_format} />}
           {data.language && <MetricsRow label="Language" value={data.language} />}
-          {data.confidence !== null && (
+          {data.confidence != null && (
             <MetricsRow label="Confidence" value={`${(data.confidence * 100).toFixed(1)}%`} />
           )}
         </div>
@@ -279,7 +706,7 @@ function STTDetail({ data }: { data: STTCall }) {
             {data.error}
           </div>
         ) : (
-          <DataViewer data={{ transcript: data.transcript }} defaultMode="text" />
+          <DataViewer data={data.transcript} defaultMode="text" />
         )}
       </CollapsibleSection>
     </>
@@ -287,30 +714,33 @@ function STTDetail({ data }: { data: STTCall }) {
 }
 
 function TTSDetail({ data }: { data: TTSCall }) {
+  const cost = calculateTTSCost(data.provider, data.model, data.input_chars);
+
   return (
     <>
       <CollapsibleSection title="Metrics">
         <div className="divide-y divide-[#f3f4f6]">
+          <MetricsRow label="Cost" value={formatCost(cost)} />
           <MetricsRow label="Provider" value={data.provider} />
-          <MetricsRow label="Model" value={data.model} />
+          <MetricsRow label="Model" value={data.model || "—"} />
           {data.voice && <MetricsRow label="Voice" value={data.voice} />}
           <MetricsRow label="Latency" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
           <MetricsRow label="Status" value={data.status} />
-          <MetricsRow label="Input Characters" value={data.input_chars} />
+          <MetricsRow label="Input Characters" value={data.input_chars || 0} />
           {data.output_format && <MetricsRow label="Output Format" value={data.output_format} />}
           {data.output_audio_duration_ms && (
-            <MetricsRow label="Output Duration" value={`${data.output_audio_duration_ms} ms`} />
+            <MetricsRow label="Output Duration" value={`${(data.output_audio_duration_ms / 1000).toFixed(2)}s`} />
           )}
         </div>
       </CollapsibleSection>
 
       <CollapsibleSection title="Input Text">
-        <DataViewer data={{ text: data.input_text }} defaultMode="text" />
+        <DataViewer data={data.input_text} defaultMode="text" />
       </CollapsibleSection>
 
       {data.voice_settings && Object.keys(data.voice_settings).length > 0 && (
         <CollapsibleSection title="Voice Settings" defaultOpen={false}>
-          <DataViewer data={data.voice_settings} />
+          <DataViewer data={data.voice_settings} defaultMode="json" />
         </CollapsibleSection>
       )}
 
@@ -358,7 +788,7 @@ export default function StepDetail({ node }: StepDetailProps) {
 
       {/* Content */}
       <div>
-        {node.type === "agent" && <AgentDetail data={node.data as Trace} />}
+        {node.type === "agent" && <AgentDetail node={node} />}
         {node.type === "llm" && <LLMDetail data={node.data as LLMCall} />}
         {node.type === "tool" && <ToolDetail data={node.data as ToolExecution} />}
         {node.type === "stt" && <STTDetail data={node.data as STTCall} />}

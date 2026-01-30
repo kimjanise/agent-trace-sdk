@@ -76,7 +76,7 @@ def call_openai(messages: list, tools: list = None):
     return client.chat.completions.create(**kwargs)
 
 
-@agent
+@agent(name="chat_assistant")
 def multi_tool_agent(query: str) -> str:
     messages = [{"role": "user", "content": query}]
 
@@ -92,7 +92,22 @@ def multi_tool_agent(query: str) -> str:
         if not message.tool_calls:
             return message.content
 
-        messages.append(message)
+        # Convert message to dict for serialization
+        messages.append({
+            "role": "assistant",
+            "content": message.content,
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in message.tool_calls
+            ]
+        })
 
         for tool_call in message.tool_calls:
             function_name = tool_call.function.name

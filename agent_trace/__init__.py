@@ -38,7 +38,7 @@ from .stt import stt, STTWrapper
 from .tts import tts, TTSWrapper
 from .agent import agent, AgentWrapper, get_trace
 from .context import get_current_trace, TraceContext
-from .storage import TraceStore, InMemoryTraceStore, FileTraceStore, SupabaseTraceStore
+from .storage import TraceStore, InMemoryTraceStore, FileTraceStore, SupabaseTraceStore, ThreadedSupabaseTraceStore
 from .config import configure
 
 __version__ = "0.1.0"
@@ -50,8 +50,9 @@ __all__ = [
     "STTCall", "TTSCall",
     "AgentWrapper", "ToolWrapper", "LLMWrapper", "STTWrapper", "TTSWrapper",
     "get_current_trace", "TraceContext",
-    "TraceStore", "InMemoryTraceStore", "FileTraceStore", "SupabaseTraceStore",
+    "TraceStore", "InMemoryTraceStore", "FileTraceStore", "SupabaseTraceStore", "ThreadedSupabaseTraceStore",
 ]
 
 # Auto-configure from environment variables on import
+# Uses ThreadedSupabaseTraceStore to avoid httpx conflicts with other SDKs
 configure()

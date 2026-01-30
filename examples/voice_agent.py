@@ -49,9 +49,9 @@ as they will be spoken aloud. Aim for 1-3 sentences unless the user asks for mor
 SAMPLE_RATE = 16000  # 16kHz for speech recognition
 
 
-def record_audio(duration: float = None, silence_threshold: float = 0.01, silence_duration: float = 1.5) -> str:
+def record_audio(duration: float = None, silence_threshold: float = 0.02, silence_duration: float = 1.5) -> str:
     """
-    Record audio from microphone until silence is detected or duration reached.
+    Record audio from microphone until silence is detected after speech.
 
     Args:
         duration: Max recording duration in seconds (None for auto-stop on silence)
@@ -65,6 +65,7 @@ def record_audio(duration: float = None, silence_threshold: float = 0.01, silenc
 
     chunks = []
     silent_chunks = 0
+    speech_started = False
     chunks_per_second = 10
     chunk_size = SAMPLE_RATE // chunks_per_second
     max_silent_chunks = int(silence_duration * chunks_per_second)
@@ -81,18 +82,29 @@ def record_audio(duration: float = None, silence_threshold: float = 0.01, silenc
             chunk_count += 1
 
             if len(chunks) > 0:
-                # Check for silence
                 rms = np.sqrt(np.mean(chunks[-1] ** 2))
-                if rms < silence_threshold:
-                    silent_chunks += 1
-                    if silent_chunks >= max_silent_chunks and len(chunks) > max_silent_chunks:
-                        break
-                else:
+
+                if rms >= silence_threshold:
+                    # Speech detected
+                    if not speech_started:
+                        print("   (recording...)")
+                        speech_started = True
                     silent_chunks = 0
+                else:
+                    # Silence detected
+                    if speech_started:
+                        silent_chunks += 1
+                        if silent_chunks >= max_silent_chunks:
+                            break
 
     print("✓ Recording complete")
 
-    # Save to temporary file
+    if not chunks:
+        # Return empty file if no audio captured
+        temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        sf.write(temp_file.name, np.array([]), SAMPLE_RATE)
+        return temp_file.name
+
     audio_data = np.concatenate(chunks, axis=0)
     temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
     sf.write(temp_file.name, audio_data, SAMPLE_RATE)
@@ -127,7 +139,7 @@ def transcribe_audio(audio_path: str) -> str:
     return transcript
 
 @llm(provider="openai", model="gpt-4o")
-def generate_response(user_message: str, conversation_history: list) -> str:
+def generate_response(user_message: str, conversation_history: list):
     """Generate a response using OpenAI."""
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     messages.extend(conversation_history)
@@ -140,7 +152,7 @@ def generate_response(user_message: str, conversation_history: list) -> str:
         max_tokens=150,
     )
 
-    return response.choices[0].message.content
+    return response  # Return full response so SDK can extract tokens
 
 @tts(provider="elevenlabs", voice="rachel")
 def synthesize_speech(text: str, output_path: str = None) -> bytes:
@@ -189,7 +201,8 @@ def voice_agent(audio_path: str = None, text_input: str = None) -> dict:
 
     # Step 2: Generate LLM response
     print("Generating response...")
-    assistant_response = generate_response(user_message, conversation_history)
+    response = generate_response(user_message, conversation_history)
+    assistant_response = response.choices[0].message.content
     print(f"Response: {assistant_response}")
 
     # Step 3: Synthesize speech
@@ -233,12 +246,13 @@ def interactive_session():
                 # Generate response
                 print("Thinking...")
                 response = generate_response(user_message, conversation_history)
-                print(f"Assistant: {response}")
+                response_text = response.choices[0].message.content
+                print(f"Assistant: {response_text}")
 
                 # Update history
                 conversation_history.append({"role": "user", "content": user_message})
-                conversation_history.append({"role": "assistant", "content": response})
-                turns.append({"user": user_message, "assistant": response})
+                conversation_history.append({"role": "assistant", "content": response_text})
+                turns.append({"user": user_message, "assistant": response_text})
 
                 # Keep history manageable (last 10 turns)
                 if len(conversation_history) > 20:
@@ -246,7 +260,7 @@ def interactive_session():
 
                 # Synthesize and play
                 output_path = "response.mp3"
-                synthesize_speech(response, output_path)
+                synthesize_speech(response_text, output_path)
                 play_audio(output_path)
 
             finally:

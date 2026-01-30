@@ -159,7 +159,6 @@ export default function TraceDetailPanel({
     typeof window !== "undefined" ? window.innerWidth * (2 / 3) : 900
   );
   const [isResizing, setIsResizing] = useState(false);
-  const [activeTab, setActiveTab] = useState<"trace">("trace");
   const [copied, setCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -309,9 +308,8 @@ export default function TraceDetailPanel({
         {/* Resize handle */}
         <div
           onMouseDown={() => setIsResizing(true)}
-          className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize transition-colors z-10 ${
-            isResizing ? "bg-[#6366f1]" : "hover:bg-[#6366f1]/50"
-          }`}
+          className={`absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize transition-colors z-10 ${isResizing ? "bg-[#6366f1]" : "hover:bg-[#6366f1]/50"
+            }`}
         />
 
         {/* Top Header */}
@@ -366,11 +364,10 @@ export default function TraceDetailPanel({
             {/* Search toggle */}
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className={`p-2 rounded-md transition-colors ${
-                showSearch
+              className={`p-2 rounded-md transition-colors ${showSearch
                   ? "bg-[#eef2ff] text-[#6366f1]"
                   : "hover:bg-[#f3f4f6] text-[#6b7280]"
-              }`}
+                }`}
               title="Search trace"
             >
               <Search className="w-4 h-4" />
@@ -396,29 +393,6 @@ export default function TraceDetailPanel({
           </div>
         </header>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1 px-4 h-11 border-b border-[#e5e7eb] bg-white">
-          <button
-            onClick={() => setActiveTab("trace")}
-            className={`flex items-center gap-2 px-3 py-1.5 text-[13px] font-medium rounded-md transition-colors ${
-              activeTab === "trace"
-                ? "bg-[#f3f4f6] text-[#1f2937]"
-                : "text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f9fafb]"
-            }`}
-          >
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M3 12h4l3-9 4 18 3-9h4" />
-            </svg>
-            Trace
-          </button>
-        </div>
-
         {/* Search bar */}
         {showSearch && (
           <div className="px-4 py-2 border-b border-[#e5e7eb] bg-[#f9fafb]">
@@ -443,54 +417,54 @@ export default function TraceDetailPanel({
               <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#e5e7eb] border-t-[#6366f1]"></div>
             </div>
           ) : filteredTree ? (
-              <>
-                {/* Left Sidebar - Tree View */}
-                <div className="w-[320px] border-r border-[#e5e7eb] flex flex-col bg-white">
-                  <div className="px-4 py-2 border-b border-[#e5e7eb]">
-                    <span className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                      Trace tree
-                    </span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto">
-                    <TraceTree
-                      tree={filteredTree}
-                      selectedNodeId={selectedNode?.id || null}
-                      onSelectNode={setSelectedNode}
-                    />
-                  </div>
+            <>
+              {/* Left Sidebar - Tree View */}
+              <div className="w-[320px] border-r border-[#e5e7eb] flex flex-col bg-white">
+                <div className="px-4 py-2 border-b border-[#e5e7eb]">
+                  <span className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
+                    Trace
+                  </span>
                 </div>
-
-                {/* Main Content - Step Detail */}
-                <div className="flex-1 overflow-hidden flex flex-col">
-                  <div className="px-4 py-2 border-b border-[#e5e7eb]">
-                    <span className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
-                      {selectedNode?.type === "agent"
-                        ? "Root span"
-                        : selectedNode?.type === "llm"
-                        ? "LLM call"
-                        : selectedNode?.type === "stt"
-                        ? "Speech-to-Text"
-                        : selectedNode?.type === "tts"
-                        ? "Text-to-Speech"
-                        : "Tool execution"}
-                    </span>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                    {selectedNode ? (
-                      <StepDetail node={selectedNode} />
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-[13px] text-[#6b7280]">
-                        Select a step to view details
-                      </div>
-                    )}
-                  </div>
+                <div className="flex-1 overflow-y-auto">
+                  <TraceTree
+                    tree={filteredTree}
+                    selectedNodeId={selectedNode?.id || null}
+                    onSelectNode={setSelectedNode}
+                  />
                 </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-[14px] text-[#6b7280]">
-                No matching nodes found
               </div>
-            )}
+
+              {/* Main Content - Step Detail */}
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <div className="px-4 py-2 border-b border-[#e5e7eb]">
+                  <span className="text-[12px] font-medium text-[#6b7280] uppercase tracking-wide">
+                    {selectedNode?.type === "agent"
+                      ? "Overview"
+                      : selectedNode?.type === "llm"
+                        ? "LLM Call"
+                        : selectedNode?.type === "stt"
+                          ? "Speech-to-Text"
+                          : selectedNode?.type === "tts"
+                            ? "Text-to-Speech"
+                            : "Tool Execution"}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  {selectedNode ? (
+                    <StepDetail node={selectedNode} />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-[13px] text-[#6b7280]">
+                      Select a step to view details
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-[14px] text-[#6b7280]">
+              No matching nodes found
+            </div>
+          )}
         </div>
       </div>
     </>

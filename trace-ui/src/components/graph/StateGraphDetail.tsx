@@ -1,8 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X, Clock, Zap, Workflow, Sparkles, Wrench, AlertCircle } from "lucide-react";
-import { TreeNode, Trace, LLMCall, ToolExecution } from "@/types/trace";
+import { X, Clock, Zap, Workflow, Sparkles, Wrench, AlertCircle, Mic, Volume2, DollarSign } from "lucide-react";
+import { TreeNode, Trace, LLMCall, ToolExecution, STTCall, TTSCall, StepType } from "@/types/trace";
+import {
+  calculateLLMCost,
+  calculateSTTCost,
+  calculateTTSCost,
+  formatCost,
+} from "@/lib/pricing";
 
 interface StateGraphDetailProps {
   node: TreeNode | null;
@@ -87,11 +93,19 @@ function AgentContent({ data }: { data: Trace }) {
 }
 
 function LLMContent({ data }: { data: LLMCall }) {
+  const cost = calculateLLMCost(
+    data.provider,
+    data.model,
+    data.prompt_tokens || 0,
+    data.completion_tokens || 0
+  );
+
   return (
     <>
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 mb-4">
         <MetricBadge icon={Clock} label="Duration" value={formatDuration(data.duration_ms)} />
         <MetricBadge icon={Zap} label="Tokens" value={data.total_tokens?.toLocaleString() || "0"} />
+        <MetricBadge icon={DollarSign} label="Cost" value={formatCost(cost)} />
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
           <div>
             <div className="text-[10px] text-gray-400 uppercase">Model</div>
@@ -160,6 +174,86 @@ function ToolContent({ data }: { data: ToolExecution }) {
   );
 }
 
+function STTContent({ data }: { data: STTCall }) {
+  const cost = calculateSTTCost(data.provider, data.model, data.audio_duration_ms);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <MetricBadge icon={Clock} label="Duration" value={formatDuration(data.duration_ms)} />
+        <MetricBadge icon={DollarSign} label="Cost" value={formatCost(cost)} />
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase">Model</div>
+            <div className="text-[12px] font-mono font-medium text-gray-900">{data.model}</div>
+          </div>
+        </div>
+        {data.audio_duration_ms && (
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+            <div>
+              <div className="text-[10px] text-gray-400 uppercase">Audio</div>
+              <div className="text-[12px] font-mono font-medium text-gray-900">
+                {(data.audio_duration_ms / 1000).toFixed(1)}s
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Section title="Transcript">
+        {data.error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-[13px] text-red-700">
+            {data.error}
+          </div>
+        ) : (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] text-gray-700 whitespace-pre-wrap">
+            {data.transcript || "(no transcript)"}
+          </div>
+        )}
+      </Section>
+    </>
+  );
+}
+
+function TTSContent({ data }: { data: TTSCall }) {
+  const cost = calculateTTSCost(data.provider, data.model, data.input_chars);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        <MetricBadge icon={Clock} label="Duration" value={formatDuration(data.duration_ms)} />
+        <MetricBadge icon={DollarSign} label="Cost" value={formatCost(cost)} />
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase">Voice</div>
+            <div className="text-[12px] font-mono font-medium text-gray-900">{data.voice || data.model || "—"}</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
+          <div>
+            <div className="text-[10px] text-gray-400 uppercase">Characters</div>
+            <div className="text-[12px] font-mono font-medium text-gray-900">{data.input_chars || 0}</div>
+          </div>
+        </div>
+      </div>
+
+      <Section title="Input Text">
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] text-gray-700 whitespace-pre-wrap max-h-[300px] overflow-auto">
+          {data.input_text || "(no text)"}
+        </div>
+      </Section>
+
+      {data.error && (
+        <Section title="Error">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-[13px] text-red-700">
+            {data.error}
+          </div>
+        </Section>
+      )}
+    </>
+  );
+}
+
 export default function StateGraphDetail({ node, onClose }: StateGraphDetailProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -196,10 +290,12 @@ export default function StateGraphDetail({ node, onClose }: StateGraphDetailProp
   const isError = node.status === "error";
 
   // Get icon and colors based on type
-  const typeConfig = {
+  const typeConfig: Record<StepType, { Icon: typeof Workflow; bg: string; color: string }> = {
     agent: { Icon: Workflow, bg: "bg-indigo-100", color: "text-indigo-600" },
     llm: { Icon: Sparkles, bg: "bg-amber-100", color: "text-amber-600" },
     tool: { Icon: Wrench, bg: "bg-emerald-100", color: "text-emerald-600" },
+    stt: { Icon: Mic, bg: "bg-pink-100", color: "text-pink-600" },
+    tts: { Icon: Volume2, bg: "bg-indigo-100", color: "text-indigo-600" },
   };
 
   const config = isError
@@ -235,6 +331,8 @@ export default function StateGraphDetail({ node, onClose }: StateGraphDetailProp
         {node.type === "agent" && <AgentContent data={node.data as Trace} />}
         {node.type === "llm" && <LLMContent data={node.data as LLMCall} />}
         {node.type === "tool" && <ToolContent data={node.data as ToolExecution} />}
+        {node.type === "stt" && <STTContent data={node.data as STTCall} />}
+        {node.type === "tts" && <TTSContent data={node.data as TTSCall} />}
       </div>
     </div>
   );

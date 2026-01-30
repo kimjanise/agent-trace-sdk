@@ -30,7 +30,22 @@ def single_tool_agent(query: str) -> str:
     message = response.choices[0].message
 
     if message.tool_calls:
-        messages.append(message)
+        # Convert message to dict for serialization
+        messages.append({
+            "role": "assistant",
+            "content": message.content,
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments
+                    }
+                }
+                for tc in message.tool_calls
+            ]
+        })
 
         for tool_call in message.tool_calls:
             function_name = tool_call.function.name

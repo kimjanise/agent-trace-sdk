@@ -1,5 +1,5 @@
 import { Node, Edge } from "reactflow";
-import { TreeNode, LLMCall, ToolExecution, Trace } from "@/types/trace";
+import { TreeNode, LLMCall, ToolExecution, Trace, STTCall, TTSCall } from "@/types/trace";
 import { StateGraphNodeData } from "../StateGraphNode";
 import { StateGraphEdgeData } from "../StateGraphEdge";
 
@@ -28,6 +28,10 @@ function getStartedAt(node: TreeNode): string | undefined {
     return (node.data as LLMCall)?.started_at;
   } else if (node.type === "tool") {
     return (node.data as ToolExecution)?.started_at;
+  } else if (node.type === "stt") {
+    return (node.data as STTCall)?.started_at;
+  } else if (node.type === "tts") {
+    return (node.data as TTSCall)?.started_at;
   }
   return undefined;
 }
@@ -82,6 +86,27 @@ function extractToolPreview(data: ToolExecution) {
 }
 
 /**
+ * Extracts preview data for an STT node
+ */
+function extractSTTPreview(data: STTCall) {
+  return {
+    model: data.model,
+    transcript: truncateString(data.transcript, 100),
+  };
+}
+
+/**
+ * Extracts preview data for a TTS node
+ */
+function extractTTSPreview(data: TTSCall) {
+  return {
+    model: data.model,
+    voice: data.voice || undefined,
+    textPreview: truncateString(data.input_text, 100),
+  };
+}
+
+/**
  * Converts a TreeNode to StateGraphNodeData
  */
 function convertNodeData(node: TreeNode): StateGraphNodeData {
@@ -95,6 +120,10 @@ function convertNodeData(node: TreeNode): StateGraphNodeData {
     preview = extractLLMPreview(node.data as LLMCall);
   } else if (node.type === "tool" && node.data) {
     preview = extractToolPreview(node.data as ToolExecution);
+  } else if (node.type === "stt" && node.data) {
+    preview = extractSTTPreview(node.data as STTCall);
+  } else if (node.type === "tts" && node.data) {
+    preview = extractTTSPreview(node.data as TTSCall);
   }
 
   return {

@@ -14,21 +14,21 @@ def now() -> datetime:
 
 
 class ToolExecutionStatus(Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    PENDING = "pending"
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
+    PENDING = "PENDING"
 
 
 class STTStatus(Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    PENDING = "pending"
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
+    PENDING = "PENDING"
 
 
 class TTSStatus(Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    PENDING = "pending"
+    SUCCESS = "SUCCESS"
+    ERROR = "ERROR"
+    PENDING = "PENDING"
 
 
 @dataclass

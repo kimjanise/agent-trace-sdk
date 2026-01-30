@@ -1,8 +1,8 @@
 from typing import Any, Callable, Optional, Union
 import asyncio
 import inspect
-from .models import LLMCall, TokenUsage
-from .context import record_llm_call
+from .models import LLMCall, TokenUsage, ToolCallRequest
+from .context import record_llm_call, LLMCallContext, set_last_llm_call_with_tools
 
 
 class LLMWrapper:
@@ -86,6 +86,21 @@ class LLMWrapper:
             usage.total_tokens = usage.prompt_tokens + usage.completion_tokens
         return usage
 
+    def _extract_tool_calls(self, result: Any) -> list:
+        """Try to extract tool calls from result (OpenAI format)."""
+        tool_calls = []
+        if hasattr(result, "choices") and result.choices:
+            choice = result.choices[0]
+            if hasattr(choice, "message") and hasattr(choice.message, "tool_calls"):
+                if choice.message.tool_calls:
+                    for tc in choice.message.tool_calls:
+                        tool_calls.append(ToolCallRequest(
+                            tool_call_id=tc.id,
+                            tool_name=tc.function.name,
+                            arguments_raw=tc.function.arguments,
+                        ))
+        return tool_calls
+
     def __call__(self, *args, **kwargs) -> Any:
         if self._is_async:
             return self._call_async(*args, **kwargs)
@@ -97,19 +112,26 @@ class LLMWrapper:
             model=self._model,
             request_messages=self._extract_messages(args, kwargs),
         )
-        try:
-            result = self._func(*args, **kwargs)
-            llm_call.response_content = self._extract_response_content(result)
-            llm_call.usage = self._extract_usage(result)
-            llm_call.response_finish_reason = "stop"
-            llm_call.complete()
-            return result
-        except Exception as e:
-            llm_call.response_finish_reason = f"error: {str(e)}"
-            llm_call.complete()
-            raise
-        finally:
-            record_llm_call(llm_call)
+        with LLMCallContext(llm_call):
+            try:
+                result = self._func(*args, **kwargs)
+                llm_call.response_content = self._extract_response_content(result)
+                llm_call.usage = self._extract_usage(result)
+                llm_call.response_tool_calls = self._extract_tool_calls(result)
+                llm_call.response_finish_reason = "stop"
+                llm_call.complete()
+
+                # Track LLM calls with tool calls for tool-LLM linking
+                if llm_call.response_tool_calls:
+                    set_last_llm_call_with_tools(llm_call)
+
+                return result
+            except Exception as e:
+                llm_call.response_finish_reason = f"error: {str(e)}"
+                llm_call.complete()
+                raise
+            finally:
+                record_llm_call(llm_call)
 
     async def _call_async(self, *args, **kwargs) -> Any:
         llm_call = LLMCall(
@@ -117,19 +139,26 @@ class LLMWrapper:
             model=self._model,
             request_messages=self._extract_messages(args, kwargs),
         )
-        try:
-            result = await self._func(*args, **kwargs)
-            llm_call.response_content = self._extract_response_content(result)
-            llm_call.usage = self._extract_usage(result)
-            llm_call.response_finish_reason = "stop"
-            llm_call.complete()
-            return result
-        except Exception as e:
-            llm_call.response_finish_reason = f"error: {str(e)}"
-            llm_call.complete()
-            raise
-        finally:
-            record_llm_call(llm_call)
+        with LLMCallContext(llm_call):
+            try:
+                result = await self._func(*args, **kwargs)
+                llm_call.response_content = self._extract_response_content(result)
+                llm_call.usage = self._extract_usage(result)
+                llm_call.response_tool_calls = self._extract_tool_calls(result)
+                llm_call.response_finish_reason = "stop"
+                llm_call.complete()
+
+                # Track LLM calls with tool calls for tool-LLM linking
+                if llm_call.response_tool_calls:
+                    set_last_llm_call_with_tools(llm_call)
+
+                return result
+            except Exception as e:
+                llm_call.response_finish_reason = f"error: {str(e)}"
+                llm_call.complete()
+                raise
+            finally:
+                record_llm_call(llm_call)
 
 
 def llm(

@@ -63,15 +63,17 @@ def generate_tool_schema(func: Callable) -> dict:
         if param.default is param.empty:
             required.append(name)
     
-    return {
+    schema = {
         "name": func.__name__,
         "description": func.__doc__ or "",
         "parameters": {
             "type": "object",
             "properties": properties,
-            "required": required if required else None,
         }
     }
+    if required:
+        schema["parameters"]["required"] = required
+    return schema
 
 
 class ToolWrapper:

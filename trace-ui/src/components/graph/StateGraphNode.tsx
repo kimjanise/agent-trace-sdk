@@ -10,11 +10,13 @@ import {
   CheckCircle,
   Clock,
   Zap,
+  Mic,
+  Volume2,
 } from "lucide-react";
 
 export interface StateGraphNodeData {
   id: string;
-  type: "agent" | "llm" | "tool";
+  type: "agent" | "llm" | "tool" | "stt" | "tts";
   name: string;
   status: string;
   duration_ms: number | null;
@@ -27,10 +29,15 @@ export interface StateGraphNodeData {
     model?: string;
     messageCount?: number;
     responsePreview?: string;
-    tokens?: number;
+    tokens?: number | null;
     // Tool
     argsPreview?: string;
     resultPreview?: string;
+    // STT
+    transcript?: string;
+    // TTS
+    voice?: string;
+    textPreview?: string;
   };
   originalNode: unknown;
 }
@@ -59,6 +66,22 @@ const TYPE_STYLES = {
     iconBg: "bg-emerald-100",
     iconColor: "text-emerald-600",
     Icon: Wrench,
+  },
+  stt: {
+    bg: "bg-pink-50",
+    border: "border-pink-200",
+    accent: "border-pink-500",
+    iconBg: "bg-pink-100",
+    iconColor: "text-pink-600",
+    Icon: Mic,
+  },
+  tts: {
+    bg: "bg-violet-50",
+    border: "border-violet-200",
+    accent: "border-violet-500",
+    iconBg: "bg-violet-100",
+    iconColor: "text-violet-600",
+    Icon: Volume2,
   },
 };
 
@@ -173,6 +196,38 @@ function StateGraphNodeComponent({ data, selected }: NodeProps<StateGraphNodeDat
               <span className="text-gray-400">Result: </span>
               <span className="font-mono text-[11px] text-gray-700">
                 {truncate(data.preview.resultPreview, 45)}
+              </span>
+            </div>
+          </>
+        )}
+
+        {data.type === "stt" && (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono">
+                {data.preview.model || "unknown"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Transcript: </span>
+              <span className="text-gray-700">
+                {truncate(data.preview.transcript, 50)}
+              </span>
+            </div>
+          </>
+        )}
+
+        {data.type === "tts" && (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[11px] font-mono">
+                {data.preview.voice || data.preview.model || "unknown"}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400">Text: </span>
+              <span className="text-gray-700">
+                {truncate(data.preview.textPreview, 50)}
               </span>
             </div>
           </>

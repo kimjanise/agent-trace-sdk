@@ -8,7 +8,7 @@ export interface Trace {
   ended_at: string | null;
   status: "active" | "completed" | "error";
   metadata: Record<string, unknown>;
-  total_tokens: number;
+  total_tokens: number | null;
   duration_ms: number | null;
   created_at: string;
   // Computed field for UI
@@ -32,9 +32,9 @@ export interface LLMCall {
     arguments_raw: string;
   }>;
   response_finish_reason: string | null;
-  prompt_tokens: number;
-  completion_tokens: number;
-  total_tokens: number;
+  prompt_tokens: number | null;
+  completion_tokens: number | null;
+  total_tokens: number | null;
   started_at: string;
   ended_at: string | null;
   duration_ms: number | null;
@@ -78,8 +78,8 @@ export interface TTSCall {
   provider: string;
   model: string;
   voice: string | null;
-  input_text: string;
-  input_chars: number;
+  input_text: string | null;
+  input_chars: number | null;
   output_audio_duration_ms: number | null;
   output_format: string | null;
   voice_settings: Record<string, unknown> | null;
@@ -97,7 +97,7 @@ export interface TreeNode {
   type: StepType;
   name: string;
   duration_ms: number | null;
-  tokens?: number;
+  tokens?: number | null;
   status?: string;
   data: Trace | LLMCall | ToolExecution | STTCall | TTSCall;
   children: TreeNode[];

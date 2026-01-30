@@ -65,8 +65,8 @@ def configure(
     key = supabase_key or os.environ.get("SUPABASE_KEY")
 
     if url and key:
-        from .storage import SupabaseTraceStore
-        _config.store = SupabaseTraceStore(url=url, key=key)
+        from .storage import ThreadedSupabaseTraceStore
+        _config.store = ThreadedSupabaseTraceStore(url=url, key=key)
 
 
 def get_config() -> _Config:

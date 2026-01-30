@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Filter
 } from "lucide-react";
+import Image from "next/image";
+import erisLogo from "@/assets/eris.png";
 
 export default function Home() {
   const [traces, setTraces] = useState<Trace[]>([]);
@@ -63,8 +65,13 @@ export default function Home() {
       {/* Header */}
       <div className="bg-white border-b border-[#e5e7eb]">
         <div className="flex items-center justify-between px-6 py-3">
-          {/* Product Name */}
-          <h1 className="text-[18px] font-semibold text-[#1f2937]">eris</h1>
+          {/* Logo */}
+          <Image
+            src={erisLogo}
+            alt="Eris"
+            height={28}
+            className="w-auto"
+          />
 
           {/* Right side */}
           <div className="flex items-center gap-5">

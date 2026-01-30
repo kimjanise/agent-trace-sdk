@@ -157,7 +157,7 @@ function TreeNodeItem({ node, depth, selectedNodeId, onSelectNode, isLast }: Tre
         )}
 
         {/* Cost badge (only for nodes with tokens) */}
-        {node.tokens !== undefined && node.tokens > 0 && (
+        {node.tokens != null && node.tokens > 0 && (
           <span className="text-[12px] text-[#6b7280] bg-[#f3f4f6] px-2 py-1 rounded flex-shrink-0">
             {formatCost(node.tokens)}
           </span>
