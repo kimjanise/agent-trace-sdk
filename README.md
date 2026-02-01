@@ -542,12 +542,12 @@ def my_agent(input: str) -> str:
 
 ## Web UI
 
-The `trace-ui` directory contains a Next.js application for visualizing traces.
+The `trace_ui` directory contains a Next.js application for visualizing traces.
 
 ### Setup
 
 ```bash
-cd trace-ui
+cd trace_ui
 npm install
 ```
 
@@ -638,17 +638,13 @@ agent-trace-sdk/
 │   ├── context.py         # Context management
 │   ├── config.py          # Configuration
 │   └── storage.py         # Storage backends
-├── trace-ui/
-│   └── src/
-│       ├── app/           # Next.js pages
-│       ├── components/    # React components
-│       ├── lib/           # Supabase client
-│       └── types/         # TypeScript types
-└── examples/
-    ├── single_tool_agent.py
-    ├── multi_tool_agent.py
-    ├── parallel_agent.py
-    └── multi_turn_agent.py
+├── trace_ui/
+    └── src/
+        ├── app/           # Next.js pages
+        ├── components/    # React components
+        ├── lib/           # Supabase client
+        └── types/         # TypeScript types
+
 ```
 
 ## License
