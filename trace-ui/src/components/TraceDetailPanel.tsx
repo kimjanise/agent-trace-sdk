@@ -210,13 +210,11 @@ export default function TraceDetailPanel({
       setLoading(true);
       try {
         const [llmCallsData, toolExecutionsData, sttCallsData, ttsCallsData] = await Promise.all([
-          getLLMCalls(trace.trace_id).catch((e) => { console.error("Error fetching LLM calls:", e); return []; }),
-          getToolExecutions(trace.trace_id).catch((e) => { console.error("Error fetching tool executions:", e); return []; }),
-          getSTTCalls(trace.trace_id).catch((e) => { console.error("Error fetching STT calls:", e); return []; }),
-          getTTSCalls(trace.trace_id).catch((e) => { console.error("Error fetching TTS calls:", e); return []; }),
+          getLLMCalls(trace.trace_id).catch(() => []),
+          getToolExecutions(trace.trace_id).catch(() => []),
+          getSTTCalls(trace.trace_id).catch(() => []),
+          getTTSCalls(trace.trace_id).catch(() => []),
         ]);
-
-        console.log("Loaded trace data:", { llmCallsData, toolExecutionsData, sttCallsData, ttsCallsData });
 
         setLlmCalls(llmCallsData);
         setToolExecutions(toolExecutionsData);
@@ -226,8 +224,8 @@ export default function TraceDetailPanel({
         const treeData = buildTree(trace, llmCallsData, toolExecutionsData, sttCallsData, ttsCallsData);
         setTree(treeData);
         setSelectedNode(treeData);
-      } catch (error) {
-        console.error("Error loading trace details:", error);
+      } catch {
+        // Silently handle errors
       } finally {
         setLoading(false);
       }

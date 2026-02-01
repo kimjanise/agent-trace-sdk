@@ -53,6 +53,4 @@ __all__ = [
     "TraceStore", "InMemoryTraceStore", "FileTraceStore", "SupabaseTraceStore", "ThreadedSupabaseTraceStore",
 ]
 
-# Auto-configure from environment variables on import
-# Uses lazy initialization to avoid httpx conflicts with other SDKs (Deepgram, ElevenLabs)
 configure()

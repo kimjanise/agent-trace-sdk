@@ -36,8 +36,6 @@ from elevenlabs import ElevenLabs
 
 from agent_trace import agent, llm, stt, tts
 
-
-# Initialize clients
 deepgram = DeepgramClient(api_key=os.environ.get("DEEPGRAM_API_KEY"))
 openai_client = OpenAI()
 elevenlabs = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))

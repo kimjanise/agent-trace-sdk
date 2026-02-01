@@ -114,8 +114,7 @@ def multi_turn_agent(query: str) -> str:
         if not message.tool_calls:
             return message.content
 
-        # Convert message to dict for serialization
-        messages.append({
+                messages.append({
             "role": "assistant",
             "content": message.content,
             "tool_calls": [

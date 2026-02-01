@@ -102,17 +102,17 @@ function CollapsibleSection({ title, icon, defaultOpen = true, children }: Colla
     <div className="border-b border-[#e5e7eb]">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-3 w-full px-5 py-4 text-left hover:bg-[#f9fafb] transition-colors"
+        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-[#f9fafb] transition-colors"
       >
         {open ? (
-          <ChevronDown className="w-5 h-5 text-[#9ca3af]" />
+          <ChevronDown className="w-4 h-4 text-[#9ca3af]" />
         ) : (
-          <ChevronRight className="w-5 h-5 text-[#9ca3af]" />
+          <ChevronRight className="w-4 h-4 text-[#9ca3af]" />
         )}
         {icon}
-        <span className="text-[15px] font-medium text-[#1f2937]">{title}</span>
+        <span className="text-[14px] font-medium text-[#1f2937]">{title}</span>
       </button>
-      {open && <div className="px-5 pb-5">{children}</div>}
+      {open && <div className="px-4 pb-3">{children}</div>}
     </div>
   );
 }
@@ -199,7 +199,7 @@ function DataViewer({ data, defaultMode = "json", label }: DataViewerProps) {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         {label && <span className="text-[12px] text-[#6b7280] uppercase tracking-wide">{label}</span>}
         <select
           className="galileo-select text-[12px]"
@@ -273,7 +273,7 @@ function getIcon(type: string) {
 
 function MetricsRow({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex items-center justify-between py-2">
+    <div className="flex items-center justify-between py-1.5">
       <span className="text-[13px] text-[#6b7280]">{label}</span>
       <span className="text-[13px] text-[#1f2937] font-medium">{value}</span>
     </div>
@@ -443,22 +443,22 @@ function ProviderMetricsTable({ metrics }: { metrics: ProviderMetrics[] }) {
   const totalCost = metrics.reduce((sum, m) => sum + m.totalCost, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Summary */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-[#f9fafb] rounded-lg p-3">
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-[#f9fafb] rounded-lg p-2">
           <div className="text-[11px] text-[#6b7280] uppercase">Total Cost</div>
-          <div className="text-[15px] font-semibold text-[#1f2937]">{formatCost(totalCost)}</div>
+          <div className="text-[14px] font-semibold text-[#1f2937]">{formatCost(totalCost)}</div>
         </div>
-        <div className="bg-[#f9fafb] rounded-lg p-3">
+        <div className="bg-[#f9fafb] rounded-lg p-2">
           <div className="text-[11px] text-[#6b7280] uppercase">LLM Calls</div>
-          <div className="text-[15px] font-semibold text-[#1f2937]">
+          <div className="text-[14px] font-semibold text-[#1f2937]">
             {llmMetrics.reduce((sum, m) => sum + m.count, 0)}
           </div>
         </div>
-        <div className="bg-[#f9fafb] rounded-lg p-3">
+        <div className="bg-[#f9fafb] rounded-lg p-2">
           <div className="text-[11px] text-[#6b7280] uppercase">Total Tokens</div>
-          <div className="text-[15px] font-semibold text-[#1f2937]">
+          <div className="text-[14px] font-semibold text-[#1f2937]">
             {llmMetrics.reduce((sum, m) => sum + (m.totalTokens || 0), 0).toLocaleString()}
           </div>
         </div>
@@ -664,14 +664,14 @@ function ProviderStatsDropdown({ metrics }: { metrics: ProviderMetrics[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Dropdown */}
       <div className="flex items-center gap-2">
         <span className="text-[13px] text-[#6b7280]">Provider</span>
         <select
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value as ProviderType)}
-          className="px-3 py-1.5 text-[13px] border border-[#e5e7eb] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366f1] focus:border-transparent bg-white"
+          className="px-2 py-1 text-[13px] border border-[#e5e7eb] rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366f1] focus:border-transparent bg-white"
         >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -682,14 +682,14 @@ function ProviderStatsDropdown({ metrics }: { metrics: ProviderMetrics[] }) {
       </div>
 
       {/* Stats for selected type */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-[#f9fafb] rounded-lg p-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-[#f9fafb] rounded-lg p-2">
           <div className="text-[11px] text-[#6b7280] uppercase">Cost</div>
-          <div className="text-[15px] font-semibold text-[#1f2937]">{formatCost(stats.totalCost)}</div>
+          <div className="text-[14px] font-semibold text-[#1f2937]">{formatCost(stats.totalCost)}</div>
         </div>
-        <div className="bg-[#f9fafb] rounded-lg p-3">
+        <div className="bg-[#f9fafb] rounded-lg p-2">
           <div className="text-[11px] text-[#6b7280] uppercase"># of Calls</div>
-          <div className="text-[15px] font-semibold text-[#1f2937]">{stats.totalCalls}</div>
+          <div className="text-[14px] font-semibold text-[#1f2937]">{stats.totalCalls}</div>
         </div>
       </div>
     </div>
@@ -708,7 +708,7 @@ function AgentDetail({ node }: { node: TreeNode }) {
   return (
     <>
       <CollapsibleSection title="Metrics">
-        <div className="divide-y divide-[#f3f4f6] mb-4">
+        <div className="divide-y divide-[#f3f4f6] mb-3">
           <MetricsRow label="Total Duration" value={data.duration_ms !== null ? `${data.duration_ms} ms` : "—"} />
           <MetricsRow label="Total Cost" value={formatCost(totalCost)} />
           <MetricsRow label="Status" value={capitalizeStatus(data.status)} />
@@ -718,7 +718,7 @@ function AgentDetail({ node }: { node: TreeNode }) {
 
       {turns.length > 0 && (
         <CollapsibleSection title={`Conversation (${turns.length} turn${turns.length > 1 ? "s" : ""})`}>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {turns.map((turn, i) => (
               <ConversationTurnView key={i} turn={turn} />
             ))}
@@ -917,10 +917,10 @@ export default function StepDetail({ node }: StepDetailProps) {
   return (
     <div className="h-full overflow-y-auto bg-white">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-[#e5e7eb] px-5 py-4 z-10">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-0 bg-white border-b border-[#e5e7eb] px-4 py-3 z-10">
+        <div className="flex items-center gap-2">
           {getIcon(node.type)}
-          <span className="text-[16px] font-semibold text-[#1f2937]">
+          <span className="text-[15px] font-semibold text-[#1f2937]">
             {getTitle()}
           </span>
           {(node.type === "llm" || node.type === "stt" || node.type === "tts") && (

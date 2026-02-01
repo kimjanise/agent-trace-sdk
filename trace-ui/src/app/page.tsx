@@ -28,8 +28,7 @@ export default function Home() {
     try {
       const data = await getTraces();
       setTraces(data);
-    } catch (err) {
-      console.error("Error loading traces:", err);
+    } catch {
       setError("Failed to load traces. Check your Supabase configuration.");
     } finally {
       setLoading(false);

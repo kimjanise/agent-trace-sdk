@@ -39,13 +39,11 @@ class TTSWrapper:
         return self._voice
 
     def _extract_input_text(self, args: tuple, kwargs: dict) -> str:
-        """Try to extract input text from arguments."""
-        # Check common parameter names
+        """Extract input text from function arguments."""
         for key in ["text", "input", "input_text", "content", "message"]:
             if key in kwargs:
                 return str(kwargs[key])
 
-        # Fall back to first string argument
         for arg in args:
             if isinstance(arg, str):
                 return arg

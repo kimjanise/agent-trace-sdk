@@ -388,15 +388,11 @@ class ThreadedSupabaseTraceStore(TraceStore):
                 self._queue.task_done()
             except queue.Empty:
                 continue
-            except Exception as e:
-                # Log but don't crash the worker
-                import sys
-                print(f"[agent-trace] Error saving trace: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
     def _do_save(self, trace: Trace):
-        """Actually save the trace (runs in background thread)."""
-        import sys
-        print(f"[agent-trace] Saving trace {trace.trace_id} with {len(trace.llm_calls)} LLM, {len(trace.stt_calls)} STT, {len(trace.tts_calls)} TTS calls", file=sys.stderr)
+        """Save trace data to Supabase."""
         client = self._get_client()
 
         trace_data = {
@@ -413,7 +409,6 @@ class ThreadedSupabaseTraceStore(TraceStore):
             "duration_ms": trace.duration_ms,
         }
         client.table("traces").upsert(trace_data).execute()
-        print(f"[agent-trace] Saved trace", file=sys.stderr)
 
         for llm_call in trace.llm_calls:
             try:
@@ -443,9 +438,8 @@ class ThreadedSupabaseTraceStore(TraceStore):
                     "streaming": llm_call.streaming,
                 }
                 client.table("llm_calls").upsert(call_data).execute()
-                print(f"[agent-trace] Saved LLM call {llm_call.call_id}", file=sys.stderr)
-            except Exception as e:
-                print(f"[agent-trace] Error saving LLM call: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
         for tool_exec in trace.tool_executions:
             exec_data = {
@@ -483,9 +477,8 @@ class ThreadedSupabaseTraceStore(TraceStore):
                     "error": stt_call.error,
                 }
                 client.table("stt_calls").upsert(stt_data).execute()
-                print(f"[agent-trace] Saved STT call {stt_call.call_id}", file=sys.stderr)
-            except Exception as e:
-                print(f"[agent-trace] Error saving STT call: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
         for tts_call in trace.tts_calls:
             try:
@@ -508,21 +501,16 @@ class ThreadedSupabaseTraceStore(TraceStore):
                     "error": tts_call.error,
                 }
                 client.table("tts_calls").upsert(tts_data).execute()
-                print(f"[agent-trace] Saved TTS call {tts_call.call_id}", file=sys.stderr)
-            except Exception as e:
-                print(f"[agent-trace] Error saving TTS call: {e}", file=sys.stderr)
+            except Exception:
+                pass
 
     def save(self, trace: Trace) -> None:
-        """Queue trace for background saving (non-blocking)."""
-        import sys
-        print(f"[agent-trace] Queuing trace for save...", file=sys.stderr)
+        """Queue trace for background saving."""
         self._ensure_started()
         self._queue.put(trace)
-        print(f"[agent-trace] Trace queued, queue size: {self._queue.qsize()}", file=sys.stderr)
 
     def get(self, trace_id: str) -> Optional[Trace]:
-        """Fetch trace - delegates to synchronous store."""
-        # For reads, we use a synchronous approach
+        """Fetch trace."""
         sync_store = SupabaseTraceStore(url=self.url, key=self.key)
         return sync_store.get(trace_id)
 
@@ -533,16 +521,12 @@ class ThreadedSupabaseTraceStore(TraceStore):
 
     def _shutdown(self):
         """Gracefully shutdown the background thread."""
-        import sys
         if self._started:
-            print(f"[agent-trace] Shutting down, flushing queue...", file=sys.stderr)
-            # Wait for queue to be processed before stopping
             self._queue.join()
             self._stop_event.set()
-            self._queue.put(None)  # Poison pill
+            self._queue.put(None)
             if self._thread and self._thread.is_alive():
                 self._thread.join(timeout=5.0)
-            print(f"[agent-trace] Shutdown complete", file=sys.stderr)
 
     def flush(self):
         """Wait for all queued saves to complete."""

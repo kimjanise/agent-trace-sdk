@@ -1,10 +1,8 @@
 """
-Voice Agent with Tools Example
+Voice Agent with Tool Error Example
 
-A conversational voice agent that can use tools:
-- Deepgram for Speech-to-Text (STT)
-- OpenAI for LLM processing with function calling
-- ElevenLabs for Text-to-Speech (TTS)
+A conversational voice agent that demonstrates tool error handling.
+One of the tools intentionally fails to show how errors appear in traces.
 
 Requirements:
     pip install deepgram-sdk openai elevenlabs sounddevice soundfile
@@ -15,7 +13,7 @@ Environment variables:
     ELEVENLABS_API_KEY - ElevenLabs API key
 
 Usage:
-    python examples/voice_agent_with_tools.py
+    python examples/voice_agent_with_error.py
 """
 
 import os
@@ -39,9 +37,10 @@ elevenlabs = ElevenLabs(api_key=os.environ.get("ELEVENLABS_API_KEY"))
 
 
 SYSTEM_PROMPT = """You are a helpful voice assistant with access to tools.
-You can check the weather, get current time, set reminders, and do calculations.
+You can check the weather, get current time, set reminders, do calculations, and look up user accounts.
 Keep your responses concise and conversational since they will be spoken aloud.
-When you use a tool, summarize the result naturally in your response."""
+When you use a tool, summarize the result naturally in your response.
+If a tool fails, apologize and explain you encountered a technical issue."""
 
 SAMPLE_RATE = 16000
 
@@ -68,28 +67,7 @@ def get_weather(location: str) -> dict:
 @tool
 def get_current_time(timezone: str = "UTC") -> dict:
     """Get the current time in a specified timezone."""
-    from datetime import datetime
-    import time
-
-    # Simplified timezone handling
-    offsets = {
-        "UTC": 0, "EST": -5, "PST": -8, "CST": -6, "MST": -7,
-        "GMT": 0, "JST": 9, "CET": 1, "IST": 5.5,
-    }
-    offset = offsets.get(timezone.upper(), 0)
-
-    utc_now = datetime.utcnow()
-    hours = int(offset)
-    minutes = int((offset - hours) * 60)
-
-    from datetime import timedelta
-    local_time = utc_now + timedelta(hours=hours, minutes=minutes)
-
-    return {
-        "timezone": timezone,
-        "time": local_time.strftime("%I:%M %p"),
-        "date": local_time.strftime("%A, %B %d, %Y"),
-    }
+    raise ConnectionError("Database connection failed: Unable to connect to time server. Connection timed out after 30 seconds.")
 
 
 @tool
@@ -117,16 +95,10 @@ def calculate(expression: str) -> dict:
 
 
 @tool
-def set_reminder(message: str, minutes: int) -> dict:
-    """Set a reminder for a specified number of minutes from now."""
-    from datetime import datetime, timedelta
-
-    reminder_time = datetime.now() + timedelta(minutes=minutes)
-    return {
-        "message": message,
-        "reminder_time": reminder_time.strftime("%I:%M %p"),
-        "status": "Reminder set successfully",
-    }
+def lookup_user_account(user_id: str) -> dict:
+    """Look up a user's account information by their ID. This tool intentionally fails."""
+    # Simulate a database connection error
+    raise ConnectionError(f"Database connection failed: Unable to connect to user database. Connection timed out after 30 seconds.")
 
 
 @tool
@@ -154,7 +126,7 @@ tools_config = [
     {"type": "function", "function": get_weather.schema},
     {"type": "function", "function": get_current_time.schema},
     {"type": "function", "function": calculate.schema},
-    {"type": "function", "function": set_reminder.schema},
+    {"type": "function", "function": lookup_user_account.schema},
     {"type": "function", "function": search_knowledge.schema},
 ]
 
@@ -162,7 +134,7 @@ tool_map = {
     "get_weather": get_weather,
     "get_current_time": get_current_time,
     "calculate": calculate,
-    "set_reminder": set_reminder,
+    "lookup_user_account": lookup_user_account,
     "search_knowledge": search_knowledge,
 }
 
@@ -351,16 +323,17 @@ def process_with_tools(user_message: str, conversation_history: list) -> str:
 
 @agent(name="advanced_support_voice_agent")
 def interactive_session():
-    """Run an interactive voice conversation loop with tool support."""
+    """Run an interactive voice conversation loop with tool support (including a failing tool)."""
     print("=" * 60)
-    print("🎙️  Voice Agent with Tools - Interactive Mode")
+    print("🎙️  Voice Agent with Tool Error - Interactive Mode")
     print("=" * 60)
     print("I can help you with:")
     print("  • Weather information")
     print("  • Current time in different timezones")
     print("  • Math calculations")
-    print("  • Setting reminders")
+    print("  • User account lookup (⚠️ this will fail!)")
     print("  • Searching for information")
+    print("\nTry asking: 'Look up user account 12345' to see a tool error.")
     print("\nSpeak into your microphone. Press Ctrl+C to exit.\n")
 
     conversation_history = []

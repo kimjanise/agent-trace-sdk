@@ -44,8 +44,7 @@ def bad_agent(query: str) -> str:
     message = response.choices[0].message
 
     if message.tool_calls:
-        # Convert message to dict for serialization
-        messages.append({
+                messages.append({
             "role": "assistant",
             "content": message.content,
             "tool_calls": [

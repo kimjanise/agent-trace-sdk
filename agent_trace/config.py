@@ -1,7 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 import os
 
-# Auto-load .env file if python-dotenv is available
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -20,12 +19,11 @@ class _Config:
         self._lazy_init_done = False
 
     def _lazy_init(self) -> None:
-        """Lazily initialize Supabase store on first access."""
+        """Initialize Supabase store on first access."""
         if self._lazy_init_done:
             return
         self._lazy_init_done = True
 
-        # Only auto-configure if no store is set
         if self._store is None:
             url = os.environ.get("SUPABASE_URL")
             key = os.environ.get("SUPABASE_KEY")
@@ -41,7 +39,7 @@ class _Config:
     @store.setter
     def store(self, value: Optional["TraceStore"]) -> None:
         self._store = value
-        self._lazy_init_done = True  # Mark as done if explicitly set
+        self._lazy_init_done = True
 
 
 _config = _Config()
@@ -77,8 +75,6 @@ def configure(
         _config.store = store
         return
 
-    # Only create store immediately if credentials are explicitly passed
-    # Otherwise, let lazy init handle it (avoids httpx conflicts at import time)
     if supabase_url or supabase_key:
         url = supabase_url or os.environ.get("SUPABASE_URL")
         key = supabase_key or os.environ.get("SUPABASE_KEY")

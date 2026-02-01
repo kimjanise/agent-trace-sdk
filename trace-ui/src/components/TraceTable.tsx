@@ -2,6 +2,7 @@
 
 import { Trace } from "@/types/trace";
 import { ChevronRight } from "lucide-react";
+import { formatCost } from "@/lib/pricing";
 
 interface TraceTableProps {
   traces: Trace[];
@@ -13,20 +14,20 @@ function getStatusBadge(status: string) {
   switch (status) {
     case "completed":
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#d1fae5] text-[#065f46]">
-          COMPLETED
+        <span className="inline-flex items-center px-2.5 py-1 text-[14px] font-medium rounded-md bg-[#d1fae5] text-[#065f46] uppercase">
+          {status}
         </span>
       );
     case "error":
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#fee2e2] text-[#dc2626]">
-          ERROR
+        <span className="inline-flex items-center px-2.5 py-1 text-[14px] font-medium rounded-md bg-[#fee2e2] text-[#dc2626] uppercase">
+          {status}
         </span>
       );
     default:
       return (
-        <span className="inline-flex items-center px-3 py-1.5 text-[11px] font-semibold tracking-wide rounded-md bg-[#fef3c7] text-[#d97706]">
-          {status.toUpperCase()}
+        <span className="inline-flex items-center px-2.5 py-1 text-[14px] font-medium rounded-md bg-[#fef3c7] text-[#d97706] uppercase">
+          {status}
         </span>
       );
   }
@@ -35,6 +36,19 @@ function getStatusBadge(status: string) {
 function formatDuration(ms: number | null) {
   if (ms === null) return "—";
   return `${ms} ms`;
+}
+
+function formatDateTime(dateString: string | null) {
+  if (!dateString) return "—";
+  const date = new Date(dateString);
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
 }
 
 
@@ -56,19 +70,19 @@ export default function TraceTable({
               Agent Name
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Input
-            </th>
-            <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Output
-            </th>
-            <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
               Status
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Total Duration
+              Start Time
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
-              Tokens
+              End Time
+            </th>
+            <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
+              Duration
+            </th>
+            <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
+              Total Cost
             </th>
             <th className="px-4 py-3 text-[13px] font-semibold text-[#4b5563] uppercase tracking-wide">
               Tool Errors
@@ -97,24 +111,20 @@ export default function TraceTable({
               <td className="px-4 py-2.5 text-[15px] font-medium text-[#1f2937]">
                 {trace.agent_name}
               </td>
-              <td className="px-4 py-2.5 max-w-[200px]">
-                <span className="block text-[15px] text-[#6b7280] truncate whitespace-nowrap overflow-hidden">
-                  {trace.input || "—"}
-                </span>
-              </td>
-              <td className="px-4 py-2.5 max-w-[200px]">
-                <span className="block text-[15px] text-[#6b7280] truncate whitespace-nowrap overflow-hidden">
-                  {trace.output || "—"}
-                </span>
-              </td>
               <td className="px-4 py-2.5">
                 {getStatusBadge(trace.status)}
+              </td>
+              <td className="px-4 py-2.5 text-[14px] text-[#6b7280]">
+                {formatDateTime(trace.started_at)}
+              </td>
+              <td className="px-4 py-2.5 text-[14px] text-[#6b7280]">
+                {formatDateTime(trace.ended_at)}
               </td>
               <td className="px-4 py-2.5 text-[15px] text-[#6b7280]">
                 {formatDuration(trace.duration_ms)}
               </td>
               <td className="px-4 py-2.5 text-[15px] text-[#6b7280]">
-                {trace.total_tokens}
+                {formatCost(trace.total_cost || 0)}
               </td>
               <td className="px-4 py-2.5">
                 {trace.tool_error_count !== undefined && trace.tool_error_count > 0 ? (
